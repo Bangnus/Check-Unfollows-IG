@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
     "puppeteer-extra-plugin-user-preferences", // <-- เพิ่มบรรทัดนี้
     "puppeteer-extra-plugin-user-data-dir",
     "fs-extra",
+    "universalify",
     "@sparticuz/chromium",
     "clone-deep",
     "merge-deep",
@@ -35,6 +36,7 @@ const nextConfig: NextConfig = {
         "./node_modules/puppeteer-extra-plugin-user-preferences/**/*", // <-- เพิ่มบรรทัดนี้
         "./node_modules/puppeteer-extra-plugin-user-data-dir/**/*",
         "./node_modules/fs-extra/**/*",
+        "./node_modules/universalify/**/*",
       ],
     },
   },
