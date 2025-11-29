@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
     "puppeteer-extra",
     "puppeteer-extra-plugin-stealth",
     "puppeteer-extra-plugin-user-preferences", // <-- เพิ่มบรรทัดนี้
-    // "puppeteer-extra-plugin-user-data-dir",
+    "puppeteer-extra-plugin-user-data-dir",
     "fs-extra",
     "universalify",
     "graceful-fs",
@@ -40,7 +40,7 @@ const nextConfig: NextConfig = {
         // 2. เพิ่ม path ของแพ็คเกจใหม่ลงไปในนี้ด้วย เพื่อบังคับ copy ขึ้น server
         "./node_modules/puppeteer-extra-plugin-stealth/**/*",
         "./node_modules/puppeteer-extra-plugin-user-preferences/**/*", // <-- เพิ่มบรรทัดนี้
-        // "./node_modules/puppeteer-extra-plugin-user-data-dir/**/*",
+        "./node_modules/puppeteer-extra-plugin-user-data-dir/**/*",
         "./node_modules/fs-extra/**/*",
         "./node_modules/universalify/**/*",
         "./node_modules/graceful-fs/**/*",
