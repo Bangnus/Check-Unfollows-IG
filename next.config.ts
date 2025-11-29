@@ -16,6 +16,9 @@ const nextConfig: NextConfig = {
     "@sparticuz/chromium",
     "clone-deep",
     "merge-deep",
+    "rimraf",       
+    "deepmerge",    
+    "deep-extend", 
   ],
 
   images: {
@@ -41,6 +44,9 @@ const nextConfig: NextConfig = {
         "./node_modules/universalify/**/*",
         "./node_modules/graceful-fs/**/*",
         "./node_modules/jsonfile/**/*",
+        "./node_modules/rimraf/**/*",
+        "./node_modules/deepmerge/**/*",
+        "./node_modules/deep-extend/**/*",
       ],
     },
   },
