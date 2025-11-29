@@ -1,13 +1,18 @@
 import puppeteer from "puppeteer-extra";
 import { Browser, Page, LaunchOptions } from "puppeteer";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
+import { addExtra } from "puppeteer-extra";
 
 import { config } from "@/app/config";
 import chromium from "@sparticuz/chromium";
 import puppeteerCore from "puppeteer-core";
 
-// ✅ เปิดใช้งาน Stealth Plugin เพื่อลดการตรวจจับ Puppeteer
+// ✅ เปิดใช้งาน Stealth Plugin เพื่อลดการตรวจจับ Puppeteer (สำหรับ Local)
 puppeteer.use(StealthPlugin());
+
+// ✅ Wrap puppeteer-core เพื่อใช้ Stealth Plugin (สำหรับ Production)
+const puppeteerCoreExtra = addExtra(puppeteerCore);
+puppeteerCoreExtra.use(StealthPlugin());
 
 let browserInstance: Browser | null = null;
 let pageInstance: Page | null = null;
@@ -27,7 +32,8 @@ export const getBrowserInstance = async (): Promise<Browser> => {
   }
 
   if (!browserInstance || !(await isBrowserConnected(browserInstance))) {
-    if (process.env.NODE_ENV === "production") {
+    // ✅ Check VERCEL env to ensure we only use this mode in actual production environment
+    if (process.env.NODE_ENV === "production" && process.env.VERCEL) {
       // 🚀 Production Mode (Vercel / Serverless)
       console.log(
         "🚀 Launching in Production Mode (Puppeteer Core + Chromium)"
@@ -36,8 +42,8 @@ export const getBrowserInstance = async (): Promise<Browser> => {
       // Configure Chromium
       chromium.setGraphicsMode = false;
 
-      // Launch with puppeteer-core
-      browserInstance = (await puppeteerCore.launch({
+      // Launch with puppeteer-core (Wrapped with Stealth)
+      browserInstance = (await puppeteerCoreExtra.launch({
         args: chromium.args,
         defaultViewport: chromium.defaultViewport,
         executablePath: await chromium.executablePath(),
