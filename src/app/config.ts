@@ -1,5 +1,5 @@
 export const config = {
-    HEADLESS: false, // เปลี่ยนเป็น true ใน production
+    HEADLESS: true, // เปลี่ยนเป็น true ใน production
     PROXY_SERVER: process.env.PROXY_SERVER || '',
     REQUEST_DELAY: {
       MIN: 2000,
