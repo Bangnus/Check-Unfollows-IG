@@ -5,8 +5,8 @@ const nextConfig: NextConfig = {
   // swcMinify: true, // เปิดการ Minify ด้วย SWC
   serverExternalPackages: [
     "puppeteer-extra",
-    "puppeteer-extra-plugin-stealth",
     "puppeteer",
+    "@sparticuz/chromium",
   ],
   images: {
     domains: [

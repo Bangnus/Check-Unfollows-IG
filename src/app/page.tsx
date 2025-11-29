@@ -90,7 +90,8 @@ const Page = () => {
               <div className="flex flex-col gap-6">
                 <div className="text-center mb-2">
                   <div className="bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg">
-                    <InstagramOutlined style={{ fontSize: '32px', color: 'white' }} />
+                    {/* <InstagramOutlined style={{ fontSize: '32px', color: 'white' }} /> */}
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Instagram_logo_2022.svg/1200px-Instagram_logo_2022.svg.png" alt="Instagram Logo" className="w-16 h-16" />
                   </div>
                   <Title level={3} className="!mb-0 !font-bold text-gray-800">Check Unfollows</Title>
                   <Text className="text-gray-500">Find out who is not following you back on Instagram.</Text>

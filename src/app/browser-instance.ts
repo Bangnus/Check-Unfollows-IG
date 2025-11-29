@@ -3,6 +3,8 @@ import { Browser, Page, LaunchOptions } from "puppeteer";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import randomUseragent from "random-useragent";
 import { config } from "@/app/config";
+import chromium from "@sparticuz/chromium";
+import puppeteerCore from "puppeteer-core";
 
 // ✅ เปิดใช้งาน Stealth Plugin เพื่อลดการตรวจจับ Puppeteer
 puppeteer.use(StealthPlugin());
@@ -25,23 +27,45 @@ export const getBrowserInstance = async (): Promise<Browser> => {
     }
 
     if (!browserInstance || !(await isBrowserConnected(browserInstance))) {
-        const launchOptions: LaunchOptions & { ignoreHTTPSErrors?: boolean } = {
-            headless: config.HEADLESS,
-            args: [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-accelerated-2d-canvas",
-                "--disable-gpu",
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process",
-                "--disable-blink-features=AutomationControlled",
-                `--proxy-server=${config.PROXY_SERVER || ''}`
-            ],
-            ignoreHTTPSErrors: true,
-        };
+        if (process.env.NODE_ENV === "production") {
+            // 🚀 Production Mode (Vercel / Serverless)
+            console.log("🚀 Launching in Production Mode (Puppeteer Core + Chromium)");
+            
+            // Configure Chromium
+            chromium.setGraphicsMode = false;
+            
+            // Launch with puppeteer-core
+            browserInstance = await puppeteerCore.launch({
+                args: chromium.args,
+                defaultViewport: chromium.defaultViewport,
+                executablePath: await chromium.executablePath(),
+                headless: chromium.headless,
+                ignoreHTTPSErrors: true,
+            }) as unknown as Browser;
 
-        browserInstance = await puppeteer.launch(launchOptions);
+        } else {
+            // 🛠️ Development Mode (Local Puppeteer)
+            console.log("🛠️ Launching in Development Mode (Standard Puppeteer)");
+            
+            const launchOptions: any = {
+                headless: config.HEADLESS,
+                args: [
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-accelerated-2d-canvas",
+                    "--disable-gpu",
+                    "--disable-web-security",
+                    "--disable-features=IsolateOrigins,site-per-process",
+                    "--disable-blink-features=AutomationControlled",
+                    `--proxy-server=${config.PROXY_SERVER || ''}`
+                ],
+                ignoreHTTPSErrors: true,
+            };
+
+            browserInstance = await puppeteer.launch(launchOptions);
+        }
+        
         setupRefreshInterval(); // รีเซ็ต interval ทุกครั้งที่สร้าง Browser ใหม่
     }
 

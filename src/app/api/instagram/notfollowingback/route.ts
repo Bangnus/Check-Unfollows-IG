@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPageInstance } from "@/app/browser-instance";
 
 // ✅ ใช้ globalThis เพื่อป้องกัน Session หายตอน Dev (Hot Reload)
+export const maxDuration = 60; // 60 seconds (max for Vercel Hobby)
 const globalForPuppeteer = globalThis as unknown as { currentSession: { page: Page | null } };
 const currentSession = globalForPuppeteer.currentSession || { page: null };
 if (process.env.NODE_ENV !== "production") globalForPuppeteer.currentSession = currentSession;
