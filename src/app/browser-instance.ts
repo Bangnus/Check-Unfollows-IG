@@ -44,7 +44,19 @@ export const getBrowserInstance = async (): Promise<Browser> => {
 
       // Launch with puppeteer-core (Wrapped with Stealth)
       browserInstance = (await puppeteerCoreExtra.launch({
-        args: chromium.args,
+        args: [
+          ...chromium.args,
+          "--hide-scrollbars",
+          "--disable-web-security",
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-accelerated-2d-canvas",
+          "--no-first-run",
+          "--no-zygote",
+          "--single-process",
+          "--disable-gpu",
+        ],
         defaultViewport: chromium.defaultViewport,
         executablePath: await chromium.executablePath(),
         headless: chromium.headless,

@@ -19,6 +19,7 @@
     "deepmerge": "^4.3.1",
     "dotenv": "^16.4.7",
     "fs-extra": "^11.3.2",
+    "glob": "^13.0.0",
     "graceful-fs": "^4.2.11",
     "next": "15.2.4",
     "postcss": "^8.5.3",
