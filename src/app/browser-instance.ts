@@ -41,7 +41,7 @@ export const getBrowserInstance = async (): Promise<Browser> => {
                 executablePath: await chromium.executablePath(),
                 headless: chromium.headless,
                 ignoreHTTPSErrors: true,
-            }) as unknown as Browser;
+            } as any) as unknown as Browser;
 
         } else {
             // 🛠️ Development Mode (Local Puppeteer)

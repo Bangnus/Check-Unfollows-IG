@@ -2,21 +2,20 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // reactStrictMode: true, // เปิด Strict Mode
-  // swcMinify: true, // เปิดการ Minify ด้วย SWC
+  // swcMinify: false, 
   serverExternalPackages: [
-    "puppeteer-extra",
     "puppeteer",
+    "puppeteer-core",
+    "puppeteer-extra",
+    "puppeteer-extra-plugin-stealth",
+    "clone-deep",
+    "merge-deep",
     "@sparticuz/chromium",
   ],
   images: {
-    domains: [
-      "example.com", 
-      "instagram.com"
-    ], // อนุญาตให้โหลดรูปจากโดเมนนี้
+    domains: ["example.com", "instagram.com"], // อนุญาตให้โหลดรูปจากโดเมนนี้
   },
-  experimental: {
-
-  },
+  experimental: {},
   eslint: {
     ignoreDuringBuilds: true,
   },
