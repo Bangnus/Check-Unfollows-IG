@@ -46,14 +46,14 @@ async function loginInstagram(
 
     console.log("⌨️ Typing username...");
     const usernameSelector = 'input[name="username"]';
-    await page.waitForSelector(usernameSelector, { timeout: 10000 });
+    await page.waitForSelector(usernameSelector, { timeout: 30000 });
     await page.type(usernameSelector, username, {
       delay: Math.random() * 200 + 100,
     });
 
     console.log("⌨️ Typing password...");
     const passwordSelector = 'input[name="password"]';
-    await page.waitForSelector(passwordSelector, { timeout: 10000 });
+    await page.waitForSelector(passwordSelector, { timeout: 30000 });
     await page.type(passwordSelector, password, {
       delay: Math.random() * 200 + 100,
     });
@@ -62,7 +62,7 @@ async function loginInstagram(
 
     console.log("🖱️ Clicking submit...");
     const submitSelector = 'button[type="submit"]';
-    await page.waitForSelector(submitSelector, { timeout: 10000 });
+    await page.waitForSelector(submitSelector, { timeout: 30000 });
     await page.click(submitSelector);
 
     console.log("⏳ Waiting for navigation...");
