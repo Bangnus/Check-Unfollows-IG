@@ -97,10 +97,11 @@ export const getPageInstance = async (): Promise<Page> => {
     await pageInstance.setUserAgent(userAgent);
 
     // ตั้งค่า Viewport แบบสุ่ม
+    // ตั้งค่า Viewport แบบ Desktop
     await pageInstance.setViewport({
-      width: 1280 + Math.floor(Math.random() * 100),
-      height: 800 + Math.floor(Math.random() * 100),
-      deviceScaleFactor: 1 + Math.random() * 0.5,
+      width: 1920,
+      height: 1080,
+      deviceScaleFactor: 1,
     });
 
     // ซ่อน Puppeteer จากการถูกตรวจจับ

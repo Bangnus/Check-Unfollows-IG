@@ -94,6 +94,7 @@ async function loginInstagram(
     return true;
   } catch (error) {
     console.error("🚨 Login error:", error);
+    console.log("Current URL on error:", page.url());
     return false;
   }
 }
