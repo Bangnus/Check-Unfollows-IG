@@ -6,13 +6,11 @@ import {
   Card,
   List,
   Avatar,
-  Spin,
   Alert,
   Typography,
   Statistic,
   Row,
   Col,
-  Divider,
 } from "antd";
 import { UserOutlined, LockOutlined, InstagramOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 
@@ -237,6 +235,7 @@ const Page = () => {
                                   alt={item.username}
                                   referrerPolicy="no-referrer"
                                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  /* eslint-disable-next-line @next/next/no-img-element */
                                 />
                               ) : null
                             }
