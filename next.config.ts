@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
-  // serverExternalPackages สำหรับ Next.js 15 (แก้ Build Error)
+  // 1. ระบุ Package ที่ต้องรันบน Server เท่านั้น
   serverExternalPackages: [
     "puppeteer",
     "puppeteer-core",
@@ -24,9 +24,10 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
 
-  // --- ส่วนที่เพิ่มใหม่เพื่อแก้ Runtime Error ---
+  // 2. แก้ไขส่วนนี้: ใช้ path.join เพื่อระบุตำแหน่งไฟล์ให้แม่นยำ ไม่ให้ Path เบิ้ล
   experimental: {
-    // บังคับให้ Vercel copy โฟลเดอร์ของ plugin stealth ไปที่ server ด้วย
+    // ใส่บรรทัดนี้ไว้ข้างบน เพื่อปิด Error สีแดง
+    // @ts-ignore
     outputFileTracingIncludes: {
       "/api/**/*": [
         path.join(
@@ -38,7 +39,6 @@ const nextConfig: NextConfig = {
         ),
       ],
     },
-  } as any,
+  },
 };
-
 export default nextConfig;
