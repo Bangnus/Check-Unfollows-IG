@@ -26,18 +26,11 @@ const nextConfig: NextConfig = {
 
   // 2. แก้ไขส่วนนี้: ใช้ path.join เพื่อระบุตำแหน่งไฟล์ให้แม่นยำ ไม่ให้ Path เบิ้ล
   experimental: {
-    // ใส่บรรทัดนี้ไว้ข้างบน เพื่อปิด Error สีแดง
+    // ใส่ @ts-ignore เพื่อปิดขีดแดง
     // @ts-ignore
     outputFileTracingIncludes: {
-      "/api/**/*": [
-        path.join(
-          process.cwd(),
-          "node_modules",
-          "puppeteer-extra-plugin-stealth",
-          "**",
-          "*"
-        ),
-      ],
+      // ใช้ ./ นำหน้า เพื่อบอกว่าเป็น Relative Path (ไม่เอา path เต็ม)
+      "/api/**/*": ["./node_modules/puppeteer-extra-plugin-stealth/**/*"],
     },
   },
 };
