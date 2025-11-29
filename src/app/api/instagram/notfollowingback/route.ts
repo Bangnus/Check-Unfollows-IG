@@ -1,4 +1,4 @@
-import puppeteer, { Browser, Page } from "puppeteer";
+import { Page } from "puppeteer";
 import { NextRequest, NextResponse } from "next/server";
 import { getPageInstance } from "@/app/browser-instance";
 
@@ -71,7 +71,7 @@ async function loginInstagram(page: Page, username: string, password: string): P
         try {
              await page.waitForSelector(homeSelector, { timeout: 10000 });
              console.log("✅ Login verified by Home icon presence.");
-        } catch (_e) {
+        } catch {
             console.warn("⚠️ Could not verify login by Home icon, but continuing...");
         }
 
@@ -96,7 +96,7 @@ async function scrapeUsersFromDialog(page: Page): Promise<InstagramUser[]> {
     
     try {
         await page.waitForSelector(dialogSelector, { timeout: 10000 });
-    } catch (_e) {
+    } catch {
         console.error("❌ Dialog not found!");
         return [];
     }
@@ -129,7 +129,7 @@ async function scrapeUsersFromDialog(page: Page): Promise<InstagramUser[]> {
             await page.waitForFunction(() => {
                 return document.querySelectorAll('div[role="dialog"] a[role="link"]').length > 0;
             }, { timeout: 5000 });
-        } catch(_e) {
+        } catch {
             console.log("⚠️ Waiting for users timed out, trying to scroll anyway...");
         }
 
@@ -260,7 +260,7 @@ async function closeDialog(page: Page) {
             if (closeBtn) (closeBtn as HTMLElement).click();
         });
         await delay(2000);
-    } catch (_error) {
+    } catch {
         console.log("⚠️ Could not close dialog, continuing...");
     }
 }
@@ -275,7 +275,7 @@ async function scrapeUserList(page: Page, type: "following" | "followers", clien
         
         try {
             await page.waitForSelector(linkSelector, { timeout: 10000 });
-        } catch(_e) {
+        } catch {
              console.error(`❌ Could not find link for ${type}. Is the profile public/visible?`);
              return [];
         }
@@ -381,6 +381,7 @@ export const POST = async (req: NextRequest) => {
             }
         }, { status: 200 });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
         console.error("🚨 Error:", error);
         return NextResponse.json(

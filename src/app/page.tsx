@@ -45,7 +45,7 @@ const Page = () => {
 
   const handleCheck = async () => {
     if (!username || !password) {
-      setError("กรุณากรอกทั้งชื่อผู้ใช้และรหัสผ่าน");
+      setError("Please enter both username and password.");
       return;
     }
 
@@ -65,10 +65,11 @@ const Page = () => {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "เกิดข้อผิดพลาดบางอย่าง");
+        throw new Error(result.error || "Something went wrong");
       }
 
       setData(result);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -91,8 +92,8 @@ const Page = () => {
                   <div className="bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg">
                     <InstagramOutlined style={{ fontSize: '32px', color: 'white' }} />
                   </div>
-                  <Title level={3} className="!mb-0 !font-bold text-gray-800">ตรวจสอบคนไม่ฟอลกลับ</Title>
-                  <Text className="text-gray-500">เช็คว่าใครไม่ได้ติดตามคุณกลับใน Instagram</Text>
+                  <Title level={3} className="!mb-0 !font-bold text-gray-800">Check Unfollows</Title>
+                  <Text className="text-gray-500">Find out who is not following you back on Instagram.</Text>
                 </div>
 
                 {error && (
@@ -108,7 +109,7 @@ const Page = () => {
                   <div>
                     <Input
                       size="large"
-                      placeholder="ชื่อผู้ใช้"
+                      placeholder="Username"
                       prefix={<UserOutlined className="text-gray-400" />}
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
@@ -119,7 +120,7 @@ const Page = () => {
                   <div>
                     <Input.Password
                       size="large"
-                      placeholder="รหัสผ่าน"
+                      placeholder="Password"
                       prefix={<LockOutlined className="text-gray-400" />}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -135,14 +136,14 @@ const Page = () => {
                     block
                     className="h-12 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 border-none hover:opacity-90 hover:scale-[1.02] transition-all shadow-lg shadow-purple-200 font-semibold text-lg"
                   >
-                    {loading ? "กำลังวิเคราะห์..." : "ตรวจสอบทันที"}
+                    {loading ? "Analyzing..." : "Check Now"}
                   </Button>
                 </div>
                 
                 {loading && (
                   <div className="text-center mt-2 animate-pulse">
                     <Text type="secondary" className="text-xs">
-                      กระบวนการนี้ทำงานอย่างปลอดภัยบนเซิร์ฟเวอร์ของเรา<br/>เราไม่มีการเก็บรหัสผ่านของคุณ
+                      This process runs securely on our server.<br/>We do not store your password.
                     </Text>
                   </div>
                 )}
@@ -160,9 +161,9 @@ const Page = () => {
                     onClick={() => setData(null)} 
                     className="hover:bg-white/50 rounded-full px-4"
                 >
-                    กลับไปหน้าเข้าสู่ระบบ
+                    Back to Login
                 </Button>
-                <Title level={4} className="!mb-0">ผลการวิเคราะห์</Title>
+                <Title level={4} className="!mb-0">Analysis Results</Title>
                 <div className="w-20"></div> {/* Spacer for centering */}
             </div>
 
@@ -170,7 +171,7 @@ const Page = () => {
               <Col xs={24} md={8}>
                 <Card className="text-center shadow-lg border-0 rounded-2xl overflow-hidden hover:shadow-xl transition-shadow">
                   <Statistic
-                    title={<span className="text-gray-500 font-medium">กำลังติดตาม</span>}
+                    title={<span className="text-gray-500 font-medium">Following</span>}
                     value={data.stats.followingCount}
                     valueStyle={{ color: '#3f8600', fontWeight: 'bold', fontSize: '2.5rem' }}
                   />
@@ -179,7 +180,7 @@ const Page = () => {
               <Col xs={24} md={8}>
                 <Card className="text-center shadow-lg border-0 rounded-2xl overflow-hidden hover:shadow-xl transition-shadow">
                   <Statistic
-                    title={<span className="text-gray-500 font-medium">ผู้ติดตาม</span>}
+                    title={<span className="text-gray-500 font-medium">Followers</span>}
                     value={data.stats.followersCount}
                     valueStyle={{ color: '#1890ff', fontWeight: 'bold', fontSize: '2.5rem' }}
                   />
@@ -188,7 +189,7 @@ const Page = () => {
               <Col xs={24} md={8}>
                 <Card className="text-center shadow-lg border-0 rounded-2xl overflow-hidden hover:shadow-xl transition-shadow bg-gradient-to-b from-red-50 to-white">
                   <Statistic
-                    title={<span className="text-red-500 font-medium">ไม่ฟอลกลับ</span>}
+                    title={<span className="text-red-500 font-medium">Not Following Back</span>}
                     value={data.stats.notFollowingBackCount}
                     valueStyle={{ color: '#cf1322', fontWeight: 'bold', fontSize: '2.5rem' }}
                   />
@@ -197,7 +198,7 @@ const Page = () => {
             </Row>
 
             <Card 
-                title={<span className="font-bold text-lg">รายชื่อคนที่ไม่ฟอลกลับ</span>} 
+                title={<span className="font-bold text-lg">Users Not Following You Back</span>} 
                 className="shadow-xl border-0 rounded-3xl overflow-hidden"
                 styles={{ header: { borderBottom: '1px solid #f0f0f0', padding: '20px 24px' } }}
             >
@@ -221,7 +222,7 @@ const Page = () => {
                         target="_blank" 
                         className="text-blue-500 font-medium hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-full px-4 h-8 flex items-center"
                       >
-                        ดูโปรไฟล์
+                        View Profile
                       </Button>
                     ]}
                   >
