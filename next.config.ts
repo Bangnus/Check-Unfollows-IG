@@ -1,13 +1,13 @@
 import type { NextConfig } from "next";
-import path from "path";
 
 const nextConfig: NextConfig = {
-  // 1. ระบุ Package ที่ต้องรันบน Server เท่านั้น
+  // 1. เพิ่มชื่อแพ็คเกจใน serverExternalPackages
   serverExternalPackages: [
     "puppeteer",
     "puppeteer-core",
     "puppeteer-extra",
     "puppeteer-extra-plugin-stealth",
+    "puppeteer-extra-plugin-user-preferences", // <-- เพิ่มบรรทัดนี้
     "@sparticuz/chromium",
     "clone-deep",
     "merge-deep",
@@ -24,14 +24,16 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
 
-  // 2. แก้ไขส่วนนี้: ใช้ path.join เพื่อระบุตำแหน่งไฟล์ให้แม่นยำ ไม่ให้ Path เบิ้ล
   experimental: {
-    // ใส่ @ts-ignore เพื่อปิดขีดแดง
     // @ts-ignore
     outputFileTracingIncludes: {
-      // ใช้ ./ นำหน้า เพื่อบอกว่าเป็น Relative Path (ไม่เอา path เต็ม)
-      "/api/**/*": ["./node_modules/puppeteer-extra-plugin-stealth/**/*"],
+      "/api/**/*": [
+        // 2. เพิ่ม path ของแพ็คเกจใหม่ลงไปในนี้ด้วย เพื่อบังคับ copy ขึ้น server
+        "./node_modules/puppeteer-extra-plugin-stealth/**/*",
+        "./node_modules/puppeteer-extra-plugin-user-preferences/**/*", // <-- เพิ่มบรรทัดนี้
+      ],
     },
   },
 };
+
 export default nextConfig;
