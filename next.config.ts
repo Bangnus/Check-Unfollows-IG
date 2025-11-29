@@ -2,14 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // reactStrictMode: true, // เปิด Strict Mode
-  // swcMinify: false, 
+  // swcMinify: false,
   serverExternalPackages: [
     "puppeteer",
     "puppeteer-core",
     "puppeteer-extra",
-    "puppeteer-extra-plugin-stealth",
-    "clone-deep",
-    "merge-deep",
     "@sparticuz/chromium",
   ],
   images: {
