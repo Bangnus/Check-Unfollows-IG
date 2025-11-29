@@ -84,7 +84,7 @@ const Page = () => {
         {!data && (
           <div className="flex justify-center items-center w-full h-full">
             <Card 
-              className="shadow-2xl w-full max-w-md border-0 rounded-3xl overflow-hidden backdrop-blur-md bg-white/80"
+              className="shadow-2xl w-full max-w-md border-0 rounded-xl overflow-hidden backdrop-blur-md bg-white/80"
               styles={{ body: { padding: '40px' } }}
             >
               <div className="flex flex-col gap-6">
