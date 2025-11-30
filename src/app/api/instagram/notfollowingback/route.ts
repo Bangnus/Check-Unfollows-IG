@@ -153,6 +153,56 @@ async function loginInstagram(
       return false;
     }
 
+    // 🚨 Handle "Help us confirm it's you" Challenge
+    if (pageContent.includes("Help us confirm it's you")) {
+      console.warn("⚠️ Instagram Security Challenge Detected!");
+
+      // Try to click "Next" to send code
+      try {
+        const clicked = await page.evaluate(() => {
+          const xpath = "//button[contains(text(), 'Next')]";
+          const result = document.evaluate(
+            xpath,
+            document,
+            null,
+            9, // XPathResult.FIRST_ORDERED_NODE_TYPE
+            null
+          );
+          const node = result.singleNodeValue;
+          if (node && node instanceof HTMLElement) {
+            node.click();
+            return true;
+          }
+          return false;
+        });
+
+        if (clicked) {
+          console.log("🖱️ Clicking 'Next' to send security code...");
+          await delay(2000);
+        }
+      } catch (e) {
+        console.log("Could not click Next button:", e);
+      }
+
+      // Wait for user to solve it manually (if local)
+      console.log(
+        "⏳ Waiting 3 minutes for manual verification (Check your email/SMS)..."
+      );
+      try {
+        // Wait for Home icon to appear (meaning user solved it)
+        await page.waitForSelector('svg[aria-label="Home"]', {
+          timeout: 180000,
+        }); // 3 minutes
+        console.log("✅ Manual verification successful!");
+        return true;
+      } catch {
+        console.error(
+          "❌ Verification timed out. Please try logging in from a trusted IP."
+        );
+        return false;
+      }
+    }
+
     // เช็คว่า login สำเร็จจริงไหม โดยดูว่ามี element ของหน้า home ไหม
     const homeSelector = 'svg[aria-label="Home"]';
     try {
