@@ -88,7 +88,11 @@ async function loginInstagram(
 
     // Wait for ANY input to appear first (indicates form load)
     try {
-      await page.waitForSelector("input", { timeout: 15000 });
+      // ✅ Fix: Use single quotes for the string to allow double quotes inside
+      await page.waitForSelector(
+        'input[aria-label="Phone number, username, or email"]',
+        { timeout: 15000 }
+      );
     } catch {
       console.warn("⚠️ No inputs found on page after 15s");
     }
@@ -97,11 +101,9 @@ async function loginInstagram(
       'input[name="username"]',
       'input[aria-label="Phone number, username, or email"]',
       'input[aria-label="หมายเลขโทรศัพท์ ชื่อผู้ใช้ หรืออีเมล"]', // Thai
-      'input[type="รหัสผ่าน"]',
       'input[type="text"]',
       'input[type="email"]',
       'input[type="tel"]',
-      'input[type="password"]',
       "label input",
       "#loginForm input",
     ];
