@@ -15,6 +15,7 @@ const nextConfig: NextConfig = {
     "graceful-fs",
     "rimraf",
     "glob",
+    "universalify",
   ],
 
   // 2. ย้ายมาตรงนี้! (ไม่อยู่ใน experimental แล้ว)
@@ -23,6 +24,7 @@ const nextConfig: NextConfig = {
       "./node_modules/puppeteer-extra-plugin-stealth/**/*",
       "./node_modules/puppeteer-extra-plugin-user-preferences/**/*",
       "./node_modules/puppeteer-extra-plugin-user-data-dir/**/*",
+      "./node_modules/universalify/**/*",
     ],
   },
 
