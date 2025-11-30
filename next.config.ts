@@ -16,6 +16,7 @@ const nextConfig: NextConfig = {
     "rimraf",
     "glob",
     "universalify",
+    "jsonfile",
   ],
 
   // 2. ย้ายมาตรงนี้! (ไม่อยู่ใน experimental แล้ว)
@@ -25,6 +26,8 @@ const nextConfig: NextConfig = {
       "./node_modules/puppeteer-extra-plugin-user-preferences/**/*",
       "./node_modules/puppeteer-extra-plugin-user-data-dir/**/*",
       "./node_modules/universalify/**/*",
+      "./node_modules/graceful-fs/**/*",
+      "./node_modules/jsonfile/**/*",
     ],
   },
 
