@@ -7,16 +7,9 @@ const nextConfig: NextConfig = {
     "puppeteer-core",
     "puppeteer-extra",
     "puppeteer-extra-plugin-stealth",
-    "universalify",
-    "graceful-fs",
-    "jsonfile",
     "@sparticuz/chromium",
     "clone-deep",
     "merge-deep",
-    "rimraf",
-    "deepmerge",
-    "deep-extend",
-    "glob",
   ],
 
   images: {
@@ -36,15 +29,6 @@ const nextConfig: NextConfig = {
       "/api/**/*": [
         // 2. เพิ่ม path ของแพ็คเกจใหม่ลงไปในนี้ด้วย เพื่อบังคับ copy ขึ้น server
         "./node_modules/puppeteer-extra-plugin-stealth/**/*",
-
-        "./node_modules/fs-extra/**/*",
-        "./node_modules/universalify/**/*",
-        "./node_modules/graceful-fs/**/*",
-        "./node_modules/jsonfile/**/*",
-        "./node_modules/rimraf/**/*",
-        "./node_modules/deepmerge/**/*",
-        "./node_modules/deep-extend/**/*",
-        "./node_modules/glob/**/*",
       ],
     },
   },
