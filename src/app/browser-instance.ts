@@ -55,7 +55,9 @@ export const getBrowserInstance = async (): Promise<Browser> => {
           "--no-first-run",
           "--no-zygote",
           "--single-process",
+          "--single-process",
           "--disable-gpu",
+          "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
         ],
         defaultViewport: chromium.defaultViewport,
         executablePath: await chromium.executablePath(),
@@ -78,6 +80,7 @@ export const getBrowserInstance = async (): Promise<Browser> => {
           "--disable-features=IsolateOrigins,site-per-process",
           "--disable-blink-features=AutomationControlled",
           `--proxy-server=${config.PROXY_SERVER || ""}`,
+          "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
         ],
         ignoreHTTPSErrors: true,
       };
@@ -103,10 +106,8 @@ export const getPageInstance = async (): Promise<Page> => {
   if (!pageInstance || pageInstance.isClosed()) {
     pageInstance = await browser.newPage();
 
-    // ตั้งค่า User-Agent (Fixed Modern UA)
-    const userAgent =
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
-    await pageInstance.setUserAgent(userAgent);
+    // ตั้งค่า User-Agent (Fixed Modern UA) - ย้ายไปตั้งที่ launch args แล้ว
+    // await pageInstance.setUserAgent(userAgent);
 
     // ตั้งค่า Viewport แบบสุ่ม
     // ตั้งค่า Viewport แบบ Desktop
