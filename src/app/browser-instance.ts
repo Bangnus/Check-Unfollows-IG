@@ -86,7 +86,7 @@ export const getBrowserInstance = async (): Promise<Browser> => {
       console.log("🛠️ Launching in Development Mode (Local)");
 
       browserInstance = await puppeteer.launch({
-        headless: config.HEADLESS === "true" || false,
+        headless: config.HEADLESS,
         args: [
           "--no-sandbox",
           "--disable-setuid-sandbox",

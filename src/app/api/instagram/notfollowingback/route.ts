@@ -42,15 +42,29 @@ async function loginInstagram(
     // 🛠️ IMPORTANT: บังคับ Viewport เป็น Desktop
     await page.setViewport({ width: 1920, height: 1080 });
 
-    console.log("🌍 Navigating to Instagram login page...");
-    try {
+    // 1. 🚶‍♂️ เดินเข้าหน้าแรกก่อน (เนียนกว่า)
+    console.log("🌍 Going to Instagram Homepage...");
+    await page.goto("https://www.instagram.com/", {
+      waitUntil: "networkidle2",
+      timeout: 60000,
+    });
+
+    // รอสักพักให้เหมือนคนพึ่งเปิดเว็บ
+    await delay(3000 + Math.random() * 2000);
+
+    // 2. 🔍 มองหาปุ่ม Login
+    const loginLinkSelector = 'a[href="/accounts/login/"]';
+    const loginLink = await page.$(loginLinkSelector);
+
+    if (loginLink) {
+      console.log("🖱️ Found Login link, clicking...");
+      await loginLink.click();
+    } else {
+      // ถ้าไม่เจอปุ่ม ให้พิมพ์ URL ไปเอง (แต่อย่างน้อยก็ได้ Cookies จากหน้าแรกมาแล้ว)
+      console.log("🌍 Navigating to Login page...");
       await page.goto("https://www.instagram.com/accounts/login/", {
         waitUntil: "networkidle2",
-        timeout: 60000,
       });
-    } catch (navError) {
-      console.error("⚠️ Navigation error (retrying):", navError);
-      await page.reload({ waitUntil: "networkidle2" });
     }
 
     if (page.isClosed()) throw new Error("Page closed unexpectedly");
