@@ -2,8 +2,8 @@ import { Page } from "puppeteer";
 import { NextRequest, NextResponse } from "next/server";
 import { getPageInstance } from "@/app/browser-instance";
 
-// ✅ ใช้ globalThis เพื่อป้องกัน Session หายตอน Dev (Hot Reload)
-export const maxDuration = 60; // 60 seconds (max for Vercel Hobby)
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
 
 interface InstagramUser {
   username: string;
@@ -12,18 +12,26 @@ interface InstagramUser {
   profileLink: string | null;
 }
 
+// --- Helper Functions ---
+
 async function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function simulateMouseMovement(page: Page) {
-  const mouseMoveDuration = Math.floor(Math.random() * 1500) + 1000;
-  const x = Math.floor(Math.random() * 1280);
-  const y = Math.floor(Math.random() * 800);
-  await page.mouse.move(x, y, { steps: Math.floor(Math.random() * 3) + 3 });
-  await page.mouse.move(x, y, { steps: Math.floor(Math.random() * 3) + 3 });
-  await delay(mouseMoveDuration);
+  try {
+    const mouseMoveDuration = Math.floor(Math.random() * 1500) + 1000;
+    const x = Math.floor(Math.random() * 1280);
+    const y = Math.floor(Math.random() * 800);
+    await page.mouse.move(x, y, { steps: Math.floor(Math.random() * 3) + 3 });
+    await page.mouse.move(x, y, { steps: Math.floor(Math.random() * 3) + 3 });
+    await delay(mouseMoveDuration);
+  } catch (e) {
+    /* ignore */
+  }
 }
+
+// --- Login Logic (Optimized for Render) ---
 
 async function loginInstagram(
   page: Page,
@@ -31,6 +39,9 @@ async function loginInstagram(
   password: string
 ): Promise<{ success: boolean; reason?: string }> {
   try {
+    // 🛠️ IMPORTANT: บังคับ Viewport เป็น Desktop
+    await page.setViewport({ width: 1920, height: 1080 });
+
     console.log("🌍 Navigating to Instagram login page...");
     try {
       await page.goto("https://www.instagram.com/accounts/login/", {
@@ -42,104 +53,57 @@ async function loginInstagram(
       await page.reload({ waitUntil: "networkidle2" });
     }
 
-    // Check if page is still valid
-    if (page.isClosed()) {
-      throw new Error("Page closed unexpectedly during navigation");
-    }
-
+    if (page.isClosed()) throw new Error("Page closed unexpectedly");
     await simulateMouseMovement(page);
 
-    // 🍪 Handle Cookie Consent
+    // 🍪 Handle Cookies
     try {
-      const cookieSelector = "button._a9--._a9_0";
-      if ((await page.$(cookieSelector)) !== null) {
-        console.log("🍪 Found cookie button by class, clicking...");
-        await page.click(cookieSelector);
+      const cookieBtn = await page.$x(
+        "//button[contains(text(), 'Allow all cookies') | contains(text(), 'Decline optional cookies') | contains(text(), 'Accept') | contains(text(), 'Allow')]"
+      );
+      if (cookieBtn.length > 0) {
+        console.log("🍪 Found cookie button, clicking...");
+        await (cookieBtn[0] as any).click();
         await delay(2000);
-      } else {
-        // Check for text-based buttons
-        const cookieTextSelectors = [
-          "//button[contains(text(), 'Allow all cookies')]",
-          "//button[contains(text(), 'Decline optional cookies')]",
-          "//button[contains(text(), 'Accept')]",
-          "//button[contains(text(), 'Allow')]",
-        ];
-        for (const xpath of cookieTextSelectors) {
-          try {
-            const clicked = await page.evaluate((xp) => {
-              const result = document.evaluate(xp, document, null, 9, null);
-              const node = result.singleNodeValue;
-              if (node && node instanceof HTMLElement) {
-                node.click();
-                return true;
-              }
-              return false;
-            }, xpath);
-            if (clicked) {
-              await delay(2000);
-              break;
-            }
-          } catch (err) {}
-        }
       }
     } catch (e) {}
 
     console.log("⌨️ Typing username...");
 
-    // Wait for ANY input to appear first (indicates form load)
-    try {
-      await page.waitForSelector("input", { timeout: 15000 });
-    } catch {
-      console.warn("⚠️ No inputs found on page after 15s");
-      // 📸 DEBUG: Take screenshot on failure
-      if (process.env.NODE_ENV === "production") {
-        const screenshot = await page.screenshot({ encoding: "base64" });
-        console.log(
-          "📸 Screenshot (Base64):",
-          screenshot.substring(0, 100) + "..."
-        );
-      }
-    }
-
+    // ✅ Loop หา Input หลายๆ แบบ (แก้ปัญหาหาช่องไม่เจอ)
     const usernameSelectors = [
       'input[name="username"]',
       'input[aria-label="Phone number, username, or email"]',
-      'input[aria-label="หมายเลขโทรศัพท์ ชื่อผู้ใช้ หรืออีเมล"]', // Thai
+      'input[aria-label="หมายเลขโทรศัพท์ ชื่อผู้ใช้ หรืออีเมล"]', // ภาษาไทย
       'input[type="text"]',
       'input[type="email"]',
-      'input[type="tel"]',
-      "label input",
       "#loginForm input",
     ];
-    let usernameInput;
+
+    let foundInput = false;
     for (const selector of usernameSelectors) {
       try {
-        await page.waitForSelector(selector, { timeout: 5000 }); // Increased to 5s
-        usernameInput = selector;
-        console.log(`✅ Found username input: ${selector}`);
-        break;
+        const input = await page.waitForSelector(selector, {
+          timeout: 2000,
+          visible: true,
+        });
+        if (input) {
+          console.log(`✅ Found username input: ${selector}`);
+          await input.type(username, { delay: 100 });
+          foundInput = true;
+          break;
+        }
       } catch {
         continue;
       }
     }
 
-    if (!usernameInput) {
+    if (!foundInput) {
       const title = await page.title();
-      // 📸 DEBUG: Take screenshot on failure
-      if (process.env.NODE_ENV === "production") {
-        const screenshot = await page.screenshot({ encoding: "base64" });
-        console.log(
-          "📸 Screenshot (Base64):",
-          screenshot.substring(0, 100) + "..."
-        );
-      }
-      return {
-        success: false,
-        reason: `Could not find username input field. Page: ${title}`,
-      };
+      throw new Error(
+        `Could not find ANY username input field. Page Title: ${title}`
+      );
     }
-
-    await page.type(usernameInput, username, { delay: 100 });
 
     console.log("⌨️ Typing password...");
     const passwordSelector = 'input[name="password"]';
@@ -163,49 +127,8 @@ async function loginInstagram(
     if (pageContent.includes("Suspicious login attempt")) {
       return { success: false, reason: "Suspicious login attempt blocked" };
     }
-
-    // 🚨 Handle "Help us confirm it's you" Challenge
     if (pageContent.includes("Help us confirm it's you")) {
-      console.warn("⚠️ Instagram Security Challenge Detected!");
-
-      try {
-        const clicked = await page.evaluate(() => {
-          const buttons = [
-            "//button[contains(text(), 'Next')]",
-            "//button[contains(text(), 'Send Security Code')]",
-            "//div[contains(text(), 'Next')]",
-          ];
-          for (const xpath of buttons) {
-            const result = document.evaluate(xpath, document, null, 9, null);
-            const node = result.singleNodeValue;
-            if (node && node instanceof HTMLElement) {
-              node.click();
-              return true;
-            }
-          }
-          return false;
-        });
-        if (clicked) await delay(5000);
-      } catch (e) {}
-
-      // Wait for verification
-      const isProduction = process.env.NODE_ENV === "production";
-      const waitTime = isProduction ? 30000 : 180000;
-
-      try {
-        await page.waitForSelector('svg[aria-label="Home"]', {
-          timeout: waitTime,
-        });
-        console.log("✅ Verification successful!");
-        return { success: true };
-      } catch {
-        return {
-          success: false,
-          reason: isProduction
-            ? "Challenge timed out (Auto-check failed)"
-            : "Challenge timed out (Manual check failed)",
-        };
-      }
+      return { success: false, reason: "Security Challenge Required" };
     }
 
     // Verify Login
@@ -224,7 +147,9 @@ async function loginInstagram(
     return { success: false, reason: `Login Error: ${error.message}` };
   }
 }
-// ดึงข้อมูลผู้ใช้งานจากหน้าต่าง dialog
+
+// --- Scraping Logic ---
+
 async function scrapeUsersFromDialog(
   page: Page,
   startTime: number
@@ -236,37 +161,28 @@ async function scrapeUsersFromDialog(
   let attemptNoNewUsers = 0;
   const maxAttempts = 300;
 
-  // ⏳ Dynamic Time Limit
-  // Render.com (Production) allows longer timeouts. We set it to 10 minutes (600s).
-  // Local (Development) also 5 minutes.
-  const isProduction = process.env.NODE_ENV === "production";
-  const TIME_LIMIT = isProduction ? 600000 : 300000;
-
-  // Selector สำหรับ Dialog (ลองหลายแบบ)
-  const dialogSelector = 'div[role="dialog"]';
+  // Render รันได้นาน ให้ 10 นาที
+  const TIME_LIMIT = process.env.NODE_ENV === "production" ? 600000 : 300000;
 
   try {
-    await page.waitForSelector(dialogSelector, { timeout: 10000 });
+    await page.waitForSelector('div[role="dialog"]', { timeout: 10000 });
   } catch {
     console.error("❌ Dialog not found!");
     return [];
   }
 
-  // หา element ที่ scroll ได้
+  // Mark scrollable area
   await page.evaluate(() => {
     const dialog = document.querySelector('div[role="dialog"]');
     if (dialog) {
-      // พยายามหา child ที่มีความสูงมากกว่า dialog หรือมี overflow
       const scrollable = Array.from(dialog.querySelectorAll("div")).find(
         (el) => {
           const style = window.getComputedStyle(el);
           return style.overflowY === "auto" || style.overflowY === "scroll";
         }
       );
-      if (scrollable) {
-        scrollable.classList.add("custom-scroll-target");
-      } else {
-        // ถ้าหาไม่เจอ ให้ลองหาตัวที่มีความสูงเยอะๆ
+      if (scrollable) scrollable.classList.add("custom-scroll-target");
+      else {
         const list = dialog.querySelector('div[style*="height"]');
         if (list) list.parentElement?.classList.add("custom-scroll-target");
       }
@@ -274,13 +190,8 @@ async function scrapeUsersFromDialog(
   });
 
   while (attempts < maxAttempts) {
-    // ⏳ Check Time Limit
     if (Date.now() - startTime > TIME_LIMIT) {
-      console.warn(
-        `⏳ Time limit reached (${
-          TIME_LIMIT / 1000
-        }s)! Stopping scrape to prevent timeout.`
-      );
+      console.warn(`⏳ Time limit reached!`);
       break;
     }
 
@@ -289,29 +200,24 @@ async function scrapeUsersFromDialog(
       `🔄 Attempt: ${attempts}, Users collected: ${collectedUsers.length}`
     );
 
-    // รอให้มี link user โหลดขึ้นมา
+    // Wait for links
     try {
       await page.waitForFunction(
-        () => {
-          return (
-            document.querySelectorAll('div[role="dialog"] a[role="link"]')
-              .length > 0
-          );
-        },
-        { timeout: 2000 } // Reduced timeout
+        () =>
+          document.querySelectorAll('div[role="dialog"] a[role="link"]')
+            .length > 0,
+        { timeout: 2000 }
       );
     } catch {
-      console.log("⚠️ Waiting for users timed out, trying to scroll anyway...");
+      /* ignore */
     }
 
-    // Reduced delay
     await delay(200 + Math.random() * 200);
 
+    // Extract Users
     const users = await page.evaluate((existingUsernames) => {
       const newUsers: InstagramUser[] = [];
       const foundUsernames = new Set(existingUsernames);
-
-      // Selector ที่กว้างขึ้น
       const links = document.querySelectorAll(
         'div[role="dialog"] a[role="link"]'
       );
@@ -319,26 +225,19 @@ async function scrapeUsersFromDialog(
       links.forEach((link) => {
         const href = link.getAttribute("href");
         if (!href) return;
-
         const username = href.replace(/\//g, "");
-        if (!username) return;
-
-        // กรองพวกที่ไม่ใช่ user
-        if (username === "explore" || username === "reels") return;
+        if (!username || username === "explore" || username === "reels") return;
 
         if (!foundUsernames.has(username)) {
           foundUsernames.add(username);
-
-          // ⚡ FAST MODE: Extract only essential data to speed up
           newUsers.push({
             username: username,
-            fullName: "", // Skip heavy DOM query
-            profilePic: null, // Skip heavy DOM query
+            fullName: "",
+            profilePic: null,
             profileLink: `https://www.instagram.com/${username}`,
           });
         }
       });
-
       return newUsers;
     }, Array.from(collectedUsernames));
 
@@ -349,20 +248,14 @@ async function scrapeUsersFromDialog(
       }
     }
 
-    console.log(`✅ New Users Collected: ${users.length}`);
-
-    // Minimal delay between collect and scroll
     await delay(100);
 
     // Scroll Logic
     const scrollSuccess = await page.evaluate(async () => {
-      // หาตัว scroll ที่เรา mark ไว้ หรือหาใหม่
       let scrollContainer = document.querySelector(
         ".custom-scroll-target"
       ) as HTMLElement;
-
       if (!scrollContainer) {
-        // Fallback: หา div ใน dialog ที่มีความสูงเยอะสุด
         const dialog = document.querySelector('div[role="dialog"]');
         if (dialog) {
           const divs = Array.from(dialog.querySelectorAll("div"));
@@ -376,35 +269,28 @@ async function scrapeUsersFromDialog(
       if (!scrollContainer) return false;
 
       const previousHeight = scrollContainer.scrollHeight;
-      scrollContainer.scrollBy(0, 1500); // Scroll down MORE
+      scrollContainer.scrollBy(0, 1500);
 
-      // ⏳ Wait for height to change (Content loaded)
-      // Fast check loop
       let retries = 0;
       while (scrollContainer.scrollHeight === previousHeight && retries < 15) {
-        await new Promise((resolve) => setTimeout(resolve, 100)); // Check every 100ms
+        await new Promise((resolve) => setTimeout(resolve, 100));
         retries++;
       }
-
       return scrollContainer.scrollHeight > previousHeight;
     });
 
     if (!scrollSuccess) {
-      console.log(
-        "⚠️ Scroll via JS didn't trigger load, trying mouse wheel..."
-      );
-      // Move mouse to center of dialog
+      // Fallback: Mouse Wheel
       const dialogBox = await page.$('div[role="dialog"]');
       if (dialogBox) {
         const box = await dialogBox.boundingBox();
         if (box) {
           await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-          await page.mouse.wheel({ deltaY: 1000 }); // Faster wheel
-          await delay(500); // Wait for load after wheel
+          await page.mouse.wheel({ deltaY: 1000 });
+          await delay(500);
         }
       }
     } else {
-      // If scroll successful, minimal wait
       await delay(200);
     }
 
@@ -419,13 +305,8 @@ async function scrapeUsersFromDialog(
       console.log("📌 No new users loaded for 5 attempts, stopping...");
       break;
     }
-
     previousUsersCount = newUserCount;
   }
-
-  console.log(
-    `🎉 Finished scraping. Total unique users collected: ${collectedUsers.length}`
-  );
   return collectedUsers;
 }
 
@@ -436,17 +317,12 @@ async function closeDialog(page: Page) {
       const closeBtn =
         document.querySelector(
           'div[role="dialog"] button[aria-label="Close"]'
-        ) ||
-        document
-          .querySelector('div[role="dialog"] svg[aria-label="Close"]')
-          ?.closest("button") ||
-        document.querySelector('div[role="dialog"] button'); // Fallback
-
+        ) || document.querySelector('div[role="dialog"] button');
       if (closeBtn) (closeBtn as HTMLElement).click();
     });
-    await delay(1000); // Reduced delay
+    await delay(1000);
   } catch {
-    console.log("⚠️ Could not close dialog, continuing...");
+    /* ignore */
   }
 }
 
@@ -457,44 +333,26 @@ async function scrapeUserList(
   startTime: number
 ): Promise<InstagramUser[]> {
   try {
-    // Check time before starting
-    if (Date.now() - startTime > 50000) {
-      console.warn(`⏳ Time limit reached before scraping ${type}. Skipping.`);
-      return [];
-    }
-
     console.log(`🔄 Loading ${type} for ${clientuser}`);
     await page.goto(`https://www.instagram.com/${clientuser}/`, {
       waitUntil: "networkidle2",
-      timeout: 30000, // Reduced timeout
+      timeout: 30000,
     });
 
-    // สร้าง Link selector
-    const linkSelector = `a[href*="/${type}"]`; // ใช้ wildcard * เพื่อความชัวร์
-
+    const linkSelector = `a[href*="/${type}"]`;
     try {
-      await page.waitForSelector(linkSelector, { timeout: 5000 }); // Reduced timeout
+      await page.waitForSelector(linkSelector, { timeout: 5000 });
     } catch {
       console.error(`❌ Could not find link for ${type}.`);
       return [];
     }
 
-    console.log(`🖱️ Clicking ${type} link...`);
     await page.click(linkSelector);
-
-    console.log("⏳ Waiting for dialog...");
     await page.waitForSelector('div[role="dialog"]', { timeout: 10000 });
-
-    // รอสักครู่ก่อนเริ่มดึงข้อมูล
     await delay(1000);
 
-    // ดึงข้อมูล
     const users = await scrapeUsersFromDialog(page, startTime);
-
-    // ปิด dialog
     await closeDialog(page);
-
-    console.log(`✅ Successfully scraped ${users.length} ${type}`);
     return users;
   } catch (error) {
     console.error(`🚨 Error scraping ${type}:`, error);
@@ -503,16 +361,17 @@ async function scrapeUserList(
   }
 }
 
+// --- Main Handler ---
+
 export const POST = async (req: NextRequest) => {
   let page: Page | null = null;
 
   try {
-    console.log(" API Request Received");
+    console.log("API Request Received");
     const body = await req.json();
     console.log("📦 Request Body:", body);
     const { username, password, clientuser } = body;
 
-    // กำหนด targetUser: ถ้ามี clientuser ให้ใช้, ถ้าไม่มีให้ใช้ username
     const targetUser = clientuser || username;
 
     if (!targetUser) {
@@ -522,15 +381,15 @@ export const POST = async (req: NextRequest) => {
       );
     }
 
-    // 🔐 Always start fresh session for Render/Docker stability
     console.log("🔐 Logging in to Instagram...");
-    page = await getPageInstance();
+    page = await getPageInstance(); // จะใช้ Chrome จาก Render อัตโนมัติ
 
+    // 1. LOGIN
     const loginResult = await loginInstagram(page, username, password);
     if (!loginResult.success) {
       console.error(`❌ Login Failed: ${loginResult.reason}`);
 
-      // 📸 Take screenshot if login fails
+      // 📸 Screenshot logic for Login Failure
       if (page && !page.isClosed()) {
         try {
           const screenshotBuffer = await page.screenshot();
@@ -539,20 +398,14 @@ export const POST = async (req: NextRequest) => {
             status: 401,
             headers: { "Content-Type": "image/png" },
           });
-        } catch (err) {
-          console.error("Failed to take screenshot:", err);
-        }
+        } catch (err) {}
       }
-
-      return NextResponse.json(
-        { error: loginResult.reason || "Login failed" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: loginResult.reason }, { status: 401 });
     }
 
-    // 2. เริ่ม Scrape ข้อมูล
+    // 2. SCRAPING
     console.log(`📥 Scraping following & followers for ${targetUser}...`);
-    const startTime = Date.now(); // Start timer
+    const startTime = Date.now();
 
     const following = await scrapeUserList(
       page,
@@ -560,28 +413,28 @@ export const POST = async (req: NextRequest) => {
       targetUser,
       startTime
     );
-    await delay(1000); // Reduced delay
+    await delay(1000);
+
     const followers = await scrapeUserList(
       page,
       "followers",
       targetUser,
       startTime
     );
-    await delay(1000); // Reduced delay
+    await delay(1000);
 
+    // 3. COMPARE
     const notFollowingBack = following.filter(
       (f) => !followers.some((fol) => fol.username === f.username)
     );
 
-    // Close page after use
+    // Close clean up
     if (page && !page.isClosed()) {
       await page.close();
     }
 
     return NextResponse.json(
       {
-        // following,
-        // followers,
         notFollowingBack,
         stats: {
           followingCount: following.length,
@@ -591,40 +444,19 @@ export const POST = async (req: NextRequest) => {
       },
       { status: 200 }
     );
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
-    console.error("Login Failed:", error);
+    console.error("Critical Error:", error);
 
+    // 📸 Screenshot logic for Critical Error
     if (page && !page.isClosed()) {
       try {
-        // 📸 DEBUG: Log HTML content to check if page is empty
-        const content = await page.content();
-        console.log("📄 Page Content Length:", content.length);
-        console.log(
-          "📄 Page HTML (First 500 chars):",
-          content.substring(0, 500)
-        );
-
-        // Wait a bit for rendering
-        await delay(2000);
-
-        // 1. ถ่ายรูปเก็บไว้ในตัวแปร (ไม่ต้อง save ลงไฟล์)
         const screenshotBuffer = await page.screenshot({ fullPage: true });
-
-        // 2. ปิด Browser
         await page.browser().close();
-
-        // 3. ส่งรูปภาพกลับไปให้เราดูทันที!
         return new Response(screenshotBuffer as any, {
           status: 500,
-          headers: {
-            "Content-Type": "image/png", // บอก Browser ว่านี่คือรูปภาพ
-          },
+          headers: { "Content-Type": "image/png" },
         });
-      } catch (screenshotError) {
-        console.error("Failed to take screenshot:", screenshotError);
-      }
+      } catch (err) {}
     }
 
     return NextResponse.json(

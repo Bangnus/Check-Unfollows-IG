@@ -1,16 +1,13 @@
 import puppeteer from "puppeteer-extra";
-import { Browser, Page, LaunchOptions } from "puppeteer";
+import { Browser, Page } from "puppeteer";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import { addExtra } from "puppeteer-extra";
-
-import { config } from "@/app/config";
 import chromium from "@sparticuz/chromium";
 import puppeteerCore from "puppeteer-core";
+import { config } from "@/app/config"; // ตรวจสอบว่า path นี้ถูกต้องในโปรเจกต์ของคุณ
 
-// ✅ เปิดใช้งาน Stealth Plugin เพื่อลดการตรวจจับ Puppeteer (สำหรับ Local)
+// ✅ 1. ตั้งค่า Plugin เพื่อหลบการตรวจจับ
 puppeteer.use(StealthPlugin());
-
-// ✅ Wrap puppeteer-core เพื่อใช้ Stealth Plugin (สำหรับ Production)
 const puppeteerCoreExtra = addExtra(puppeteerCore);
 puppeteerCoreExtra.use(StealthPlugin());
 
@@ -19,156 +16,153 @@ let pageInstance: Page | null = null;
 let lastActivityTime: number = Date.now();
 let refreshInterval: NodeJS.Timeout | null = null;
 
-/**
- * ✅ สร้างหรือดึง instance ของ Browser
- * - รีเฟรช session ทุก 3 ชั่วโมงหากไม่มีการใช้งาน
- * - ตั้งค่าการทำงานแบบไม่ให้ถูกตรวจจับ
- * - ใช้ Proxy server หากมีการตั้งค่า
- */
+// User Agent ล่าสุด (Chrome 122) เพื่อความเนียน
+const USER_AGENT_LINUX =
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+const USER_AGENT_WINDOWS =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+
 export const getBrowserInstance = async (): Promise<Browser> => {
-  // ตรวจสอบว่า Browser ค้างเกิน 3 ชั่วโมงหรือไม่
+  // รีเฟรช session ถ้าไม่มีการใช้งานนานเกิน 3 ชม.
   if (browserInstance && Date.now() - lastActivityTime > 3 * 60 * 60 * 1000) {
     await closeInstances();
   }
 
   if (!browserInstance || !(await isBrowserConnected(browserInstance))) {
-    // ✅ Check for Production Environment (Render / Docker)
+    // ✅ ตรวจสอบสภาพแวดล้อม
     if (process.env.NODE_ENV === "production") {
-      // 🚀 Production Mode (Docker / Render)
-      console.log(
-        "🚀 Launching in Production Mode (Puppeteer Core + Chromium)"
-      );
+      console.log("🚀 Launching in Production Mode...");
 
-      // Configure Chromium
-      chromium.setGraphicsMode = false;
+      // 🌟 HYBRID LOGIC: ตรวจสอบว่ามี Chrome ตัวเต็มติดตั้งอยู่ไหม (จาก Dockerfile)
+      if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+        console.log(
+          "✨ Detected Custom Chrome (Render/Docker) - Using Standard Launch"
+        );
 
-      // Launch with puppeteer-core (Wrapped with Stealth)
-      browserInstance = (await puppeteerCoreExtra.launch({
-        args: [
-          ...chromium.args,
-          "--no-sandbox",
-          "--disable-setuid-sandbox",
-          "--disable-dev-shm-usage",
-          "--disable-accelerated-2d-canvas",
-          "--disable-gpu",
-          "--disable-web-security",
-          "--disable-features=IsolateOrigins,site-per-process",
-          "--disable-blink-features=AutomationControlled",
-          "--window-size=1920,1080", // 👈 Force window size
-          `--proxy-server=${config.PROXY_SERVER || ""}`,
-          "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", // 👈 Linux UA for Docker
-        ],
-        defaultViewport: { width: 1920, height: 1080 }, // 👈 Explicit viewport
-        executablePath: await chromium.executablePath(),
-        headless: chromium.headless,
-        ignoreHTTPSErrors: true,
-      } as any)) as unknown as Browser;
+        browserInstance = await puppeteer.launch({
+          headless: true, // บน Render ต้องเป็น true
+          executablePath: process.env.PUPPETEER_EXECUTABLE_PATH, // ใช้ Chrome ที่ลงใน Docker
+          args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage", // สำคัญมากสำหรับ Docker
+            "--disable-accelerated-2d-canvas",
+            "--disable-gpu",
+            "--window-size=1920,1080", // บังคับจอใหญ่
+            "--start-maximized",
+            `--user-agent=${USER_AGENT_LINUX}`,
+            ...(config.PROXY_SERVER
+              ? [`--proxy-server=${config.PROXY_SERVER}`]
+              : []),
+          ],
+          defaultViewport: { width: 1920, height: 1080 },
+          ignoreHTTPSErrors: true,
+        });
+      } else {
+        // Fallback: กรณีรันบน Vercel (ต้องใช้ @sparticuz/chromium)
+        console.log("☁️ Detected Vercel/Lambda - Using Sparticuz Chromium");
+        chromium.setGraphicsMode = false;
+
+        browserInstance = (await puppeteerCoreExtra.launch({
+          args: [
+            ...chromium.args,
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--window-size=1920,1080",
+            `--user-agent=${USER_AGENT_LINUX}`,
+            ...(config.PROXY_SERVER
+              ? [`--proxy-server=${config.PROXY_SERVER}`]
+              : []),
+          ],
+          defaultViewport: { width: 1920, height: 1080 },
+          executablePath: await chromium.executablePath(),
+          headless: chromium.headless,
+          ignoreHTTPSErrors: true,
+        } as any)) as unknown as Browser;
+      }
     } else {
-      // 🛠️ Development Mode (Local Puppeteer)
-      console.log("🛠️ Launching in Development Mode (Standard Puppeteer)");
+      // 🛠️ Development Mode (Localhost)
+      console.log("🛠️ Launching in Development Mode (Local)");
 
-      const launchOptions: any = {
-        headless: config.HEADLESS,
+      browserInstance = await puppeteer.launch({
+        headless: config.HEADLESS === "true" || false,
         args: [
           "--no-sandbox",
           "--disable-setuid-sandbox",
-          "--disable-dev-shm-usage",
-          "--disable-accelerated-2d-canvas",
-          "--disable-gpu",
-          "--disable-web-security",
-          "--disable-features=IsolateOrigins,site-per-process",
-          "--disable-blink-features=AutomationControlled",
-          `--proxy-server=${config.PROXY_SERVER || ""}`,
-          "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+          "--window-size=1920,1080",
+          `--user-agent=${USER_AGENT_WINDOWS}`,
+          ...(config.PROXY_SERVER
+            ? [`--proxy-server=${config.PROXY_SERVER}`]
+            : []),
         ],
+        defaultViewport: { width: 1920, height: 1080 },
         ignoreHTTPSErrors: true,
-      };
-
-      browserInstance = await puppeteer.launch(launchOptions);
+      });
     }
 
-    setupRefreshInterval(); // รีเซ็ต interval ทุกครั้งที่สร้าง Browser ใหม่
+    setupRefreshInterval();
   }
 
   lastActivityTime = Date.now();
   return browserInstance;
 };
 
-/**
- * ✅ สร้างหรือดึง instance ของ Page
- * - ตั้งค่า User-Agent และ Viewport แบบสุ่ม
- * - ซ่อน Puppeteer จากการตรวจจับของเว็บไซต์
- */
 export const getPageInstance = async (): Promise<Page> => {
   const browser = await getBrowserInstance();
 
   if (!pageInstance || pageInstance.isClosed()) {
     pageInstance = await browser.newPage();
 
-    // ตั้งค่า User-Agent (Fixed Modern UA) - ย้ายไปตั้งที่ launch args แล้ว
-    // await pageInstance.setUserAgent(userAgent);
-
-    // ตั้งค่า Viewport แบบสุ่ม
-    // ตั้งค่า Viewport แบบ Desktop
+    // ✅ บังคับเป็นจอคอมพิวเตอร์ (Desktop) สำคัญมาก!
     await pageInstance.setViewport({
       width: 1920,
       height: 1080,
       deviceScaleFactor: 1,
+      isMobile: false,
+      hasTouch: false,
     });
 
-    // ซ่อน Puppeteer จากการถูกตรวจจับ
+    const ua =
+      process.env.NODE_ENV === "production"
+        ? USER_AGENT_LINUX
+        : USER_AGENT_WINDOWS;
+    await pageInstance.setUserAgent(ua);
+
+    // Evasion Techniques
     await pageInstance.evaluateOnNewDocument(() => {
+      // @ts-ignore
       Object.defineProperty(navigator, "webdriver", { get: () => false });
-      Object.defineProperty(navigator, "plugins", {
-        get: () => [1, 2, 3, 4, 5],
-      });
+      // @ts-ignore
       Object.defineProperty(navigator, "languages", {
         get: () => ["en-US", "en"],
       });
     });
-
-    // 🚫 Block Heavy Resources (Images, Fonts, CSS) - DISABLED TEMPORARILY
-    // await pageInstance.setRequestInterception(true);
-    // pageInstance.on("request", (req) => {
-    //   const resourceType = req.resourceType();
-    //   if (["image", "stylesheet", "font", "media"].includes(resourceType)) {
-    //     req.abort();
-    //   } else {
-    //     req.continue();
-    //   }
-    // });
   }
 
   lastActivityTime = Date.now();
   return pageInstance;
 };
 
-/**
- * ✅ ปิด Browser และ Page instance ทั้งหมด
- * - ป้องกัน resource leak โดยล้างค่า instance
- * - ล้าง interval ที่ใช้ตรวจสอบการใช้งาน
- */
 export const closeInstances = async (): Promise<void> => {
   if (pageInstance && !pageInstance.isClosed()) {
-    await pageInstance.close();
+    try {
+      await pageInstance.close();
+    } catch {}
     pageInstance = null;
   }
-
   if (browserInstance && (await isBrowserConnected(browserInstance))) {
-    await browserInstance.close();
+    try {
+      await browserInstance.close();
+    } catch {}
     browserInstance = null;
   }
-
   if (refreshInterval) {
     clearInterval(refreshInterval);
     refreshInterval = null;
   }
 };
 
-/**
- * ✅ ตรวจสอบว่า Browser ยังเปิดอยู่หรือไม่
- * - ใช้การตรวจสอบ process เพื่อเพิ่มความแม่นยำ
- */
 async function isBrowserConnected(browser: Browser): Promise<boolean> {
   try {
     const browserProcess = browser.process();
@@ -178,24 +172,16 @@ async function isBrowserConnected(browser: Browser): Promise<boolean> {
   }
 }
 
-/**
- * ✅ ตั้งค่า Interval เพื่อตรวจสอบ inactivity และรีเฟรช session
- * - ปิด Browser อัตโนมัติหากไม่มีการใช้งานเกิน 30 นาที
- */
 function setupRefreshInterval(): void {
-  if (refreshInterval) {
-    clearInterval(refreshInterval);
-  }
-
+  if (refreshInterval) clearInterval(refreshInterval);
   refreshInterval = setInterval(async () => {
     if (browserInstance && Date.now() - lastActivityTime > 30 * 60 * 1000) {
       console.log("🔄 Refreshing session due to inactivity...");
       await closeInstances();
     }
-  }, 5 * 60 * 1000); // ตรวจสอบทุก 5 นาที
+  }, 5 * 60 * 1000);
 }
 
-// ✅ ปิด Browser ก่อนที่โปรแกรมจะจบการทำงาน
 process.on("beforeExit", async () => {
   await closeInstances();
 });
