@@ -57,7 +57,7 @@ export const getBrowserInstance = async (): Promise<Browser> => {
           "--single-process",
           "--single-process",
           "--disable-gpu",
-          "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+          "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
         ],
         defaultViewport: chromium.defaultViewport,
         executablePath: await chromium.executablePath(),
@@ -80,7 +80,7 @@ export const getBrowserInstance = async (): Promise<Browser> => {
           "--disable-features=IsolateOrigins,site-per-process",
           "--disable-blink-features=AutomationControlled",
           `--proxy-server=${config.PROXY_SERVER || ""}`,
-          "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+          "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
         ],
         ignoreHTTPSErrors: true,
       };

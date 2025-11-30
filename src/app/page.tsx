@@ -62,7 +62,15 @@ const Page = () => {
         body: JSON.stringify({ username, password }),
       });
 
-      const result = await response.json();
+      const contentType = response.headers.get("content-type");
+      let result;
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        result = await response.json();
+      } else {
+        const text = await response.text();
+        console.error("❌ Non-JSON response:", text);
+        throw new Error(`Server Error: ${text.substring(0, 100)}...`);
+      }
 
       if (!response.ok) {
         throw new Error(result.error || "Something went wrong");
@@ -71,6 +79,7 @@ const Page = () => {
       setData(result);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
+      console.error("🚨 Error:", err);
       setError(err.message);
     } finally {
       setLoading(false);
