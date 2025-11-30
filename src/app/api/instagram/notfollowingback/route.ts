@@ -203,7 +203,12 @@ async function scrapeUsersFromDialog(
   let attempts = 0;
   let attemptNoNewUsers = 0;
   const maxAttempts = 300;
-  const TIME_LIMIT = 50000; // 50 seconds limit (Vercel has 60s hard limit)
+
+  // ⏳ Dynamic Time Limit
+  // Vercel (Production) has a hard 60s limit, so we stop at 55s to return data safely.
+  // Local (Development) can run longer (e.g., 5 mins).
+  const isProduction = process.env.NODE_ENV === "production";
+  const TIME_LIMIT = isProduction ? 55000 : 300000;
 
   // Selector สำหรับ Dialog (ลองหลายแบบ)
   const dialogSelector = 'div[role="dialog"]';
@@ -240,7 +245,9 @@ async function scrapeUsersFromDialog(
     // ⏳ Check Time Limit
     if (Date.now() - startTime > TIME_LIMIT) {
       console.warn(
-        "⏳ Time limit reached! Stopping scrape to prevent timeout."
+        `⏳ Time limit reached (${
+          TIME_LIMIT / 1000
+        }s)! Stopping scrape to prevent timeout.`
       );
       break;
     }
