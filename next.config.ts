@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // 1. เพิ่มชื่อแพ็คเกจใน serverExternalPackages
+  // 1. รายชื่อแพ็คเกจที่ห้าม Build (ให้ใช้แบบ Server Node.js)
   serverExternalPackages: [
     "puppeteer",
     "puppeteer-core",
@@ -10,7 +10,16 @@ const nextConfig: NextConfig = {
     "@sparticuz/chromium",
     "clone-deep",
     "merge-deep",
+    "fs-extra",
+    "graceful-fs",
+    "rimraf",
+    "glob",
   ],
+
+  // 2. ย้ายมาตรงนี้! (ไม่อยู่ใน experimental แล้ว)
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./node_modules/puppeteer-extra-plugin-stealth/**/*"],
+  },
 
   images: {
     domains: ["instagram.com", "scontent.cdninstagram.com"],
@@ -23,15 +32,8 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
 
-  experimental: {
-    // @ts-ignore
-    outputFileTracingIncludes: {
-      "/api/**/*": [
-        // 2. เพิ่ม path ของแพ็คเกจใหม่ลงไปในนี้ด้วย เพื่อบังคับ copy ขึ้น server
-        "./node_modules/puppeteer-extra-plugin-stealth/**/*",
-      ],
-    },
-  },
+  // 3. ปล่อยว่างไว้ หรือลบทิ้งก็ได้
+  experimental: {},
 };
 
 export default nextConfig;
