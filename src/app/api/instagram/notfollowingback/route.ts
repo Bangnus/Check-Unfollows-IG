@@ -598,8 +598,19 @@ export const POST = async (req: NextRequest) => {
 
     if (page && !page.isClosed()) {
       try {
+        // 📸 DEBUG: Log HTML content to check if page is empty
+        const content = await page.content();
+        console.log("📄 Page Content Length:", content.length);
+        console.log(
+          "📄 Page HTML (First 500 chars):",
+          content.substring(0, 500)
+        );
+
+        // Wait a bit for rendering
+        await delay(2000);
+
         // 1. ถ่ายรูปเก็บไว้ในตัวแปร (ไม่ต้อง save ลงไฟล์)
-        const screenshotBuffer = await page.screenshot();
+        const screenshotBuffer = await page.screenshot({ fullPage: true });
 
         // 2. ปิด Browser
         await page.browser().close();
