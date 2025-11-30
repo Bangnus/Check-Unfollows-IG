@@ -463,7 +463,7 @@ export const POST = async (req: NextRequest) => {
     console.log(" API Request Received");
     const body = await req.json();
     console.log("📦 Request Body:", body);
-    const { username, password, clientuser } = body;
+    const { username, password, clientuser, sessionid } = body;
 
     // กำหนด targetUser: ถ้ามี clientuser ให้ใช้, ถ้าไม่มีให้ใช้ username
     const targetUser = clientuser || username;
@@ -478,17 +478,29 @@ export const POST = async (req: NextRequest) => {
     let page = currentSession.page;
 
     // 1. ตรวจสอบว่าต้อง Login ใหม่หรือไม่
-    // ถ้ามี username+password ส่งมา => พยายาม Login ใหม่ หรือใช้ session เดิมถ้ายังดีอยู่
-    // แต่เพื่อความชัวร์ ถ้าส่ง creds มา เราจะเช็ค session ก่อน ถ้าไม่มีค่อย login
-    if (username && password) {
+    if (sessionid) {
+      // ✅ Cookie Mode: Use provided sessionid
+      if (!page || page.isClosed()) {
+        console.log("🍪 Authenticating via Session Cookie...");
+        page = await getPageInstance();
+
+        // Set cookie
+        await page.setCookie({
+          name: "sessionid",
+          value: sessionid,
+          domain: ".instagram.com",
+          path: "/",
+          secure: true,
+          httpOnly: true,
+        });
+
+        currentSession.page = page;
+      }
+    } else if (username && password) {
+      // 🔐 Credentials Mode: Login with username/password
       if (!page || page.isClosed()) {
         console.log("🔐 Logging in to Instagram...");
         page = await getPageInstance();
-
-        // Set User Agent - ย้ายไปตั้งที่ launch args แล้ว
-        // await page.setUserAgent(
-        //   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
-        // );
 
         const loginResult = await loginInstagram(page, username, password);
         if (!loginResult.success) {
@@ -502,12 +514,12 @@ export const POST = async (req: NextRequest) => {
         console.log("ℹ️ Active session found, skipping login.");
       }
     } else {
-      // ถ้าไม่ส่ง username/password มา ต้องมี session อยู่แล้ว
+      // ถ้าไม่ส่ง username/password หรือ sessionid มา ต้องมี session อยู่แล้ว
       if (!page || page.isClosed()) {
         return NextResponse.json(
           {
             error:
-              "Session expired and no credentials provided. Please provide username and password.",
+              "Session expired. Please provide username/password OR sessionid cookie.",
           },
           { status: 401 }
         );
