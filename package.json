@@ -15,12 +15,7 @@
     "@sparticuz/chromium": "^133.0.0",
     "@tailwindcss/postcss": "^4.0.17",
     "antd": "^5.24.5",
-    "deep-extend": "^0.6.0",
-    "deepmerge": "^4.3.1",
     "dotenv": "^16.4.7",
-    "fs-extra": "^11.3.2",
-    "glob": "^13.0.0",
-    "graceful-fs": "^4.2.11",
     "next": "15.2.4",
     "postcss": "^8.5.3",
     "puppeteer": "^24.4.0",
@@ -31,7 +26,6 @@
     "random-useragent": "^0.5.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "rimraf": "^6.1.2",
     "tailwindcss": "^4.0.17"
   },
   "devDependencies": {
