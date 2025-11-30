@@ -42,6 +42,7 @@ const Page = () => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [debugImage, setDebugImage] = useState<string | null>(null);
 
   const handleCheck = async () => {
     if (!username || !password) {
@@ -51,6 +52,7 @@ const Page = () => {
 
     setLoading(true);
     setError(null);
+    setDebugImage(null);
     setData(null);
 
     try {
@@ -63,6 +65,15 @@ const Page = () => {
       });
 
       const contentType = response.headers.get("content-type");
+      
+      // 📸 Handle Screenshot Response (Image)
+      if (contentType && contentType.includes("image/png")) {
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+        setDebugImage(imageUrl);
+        throw new Error("Scraping failed. See screenshot below for details.");
+      }
+
       let result;
       if (contentType && contentType.indexOf("application/json") !== -1) {
         result = await response.json();
@@ -107,12 +118,24 @@ const Page = () => {
                 </div>
 
                 {error && (
-                  <Alert 
-                    message={error} 
-                    type="error" 
-                    showIcon 
-                    className="rounded-xl border-red-100 bg-red-50"
-                  />
+                  <div className="flex flex-col gap-4">
+                    <Alert 
+                      message={error} 
+                      type="error" 
+                      showIcon 
+                      className="rounded-xl border-red-100 bg-red-50"
+                    />
+                    {debugImage && (
+                      <div className="text-center">
+                        <Text type="secondary" className="text-xs mb-2 block">Server Screenshot (Debug):</Text>
+                        <img 
+                          src={debugImage} 
+                          alt="Error Screenshot" 
+                          className="w-full rounded-lg border-2 border-red-200 shadow-md"
+                        />
+                      </div>
+                    )}
+                  </div>
                 )}
                 
                 <div className="space-y-4">
