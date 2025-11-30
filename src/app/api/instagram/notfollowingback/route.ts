@@ -95,6 +95,12 @@ async function loginInstagram(
   } catch (error) {
     console.error("🚨 Login error:", error);
     console.log("Current URL on error:", page.url());
+    try {
+      const bodyText = await page.evaluate(() => document.body.innerText);
+      console.log("📄 Page Text on Error:", bodyText.substring(0, 500)); // Log first 500 chars
+    } catch (e) {
+      console.log("Could not get page text");
+    }
     return false;
   }
 }
@@ -332,6 +338,12 @@ async function scrapeUserList(
       console.error(`❌ Could not find link for ${type}.`);
       console.log(`Current URL: ${page.url()}`);
       console.log(`Page Title: ${await page.title()}`);
+      try {
+        const bodyText = await page.evaluate(() => document.body.innerText);
+        console.log("📄 Page Text on Error:", bodyText.substring(0, 500));
+      } catch (e) {
+        console.log("Could not get page text");
+      }
       return [];
     }
 
