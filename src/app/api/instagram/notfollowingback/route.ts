@@ -85,10 +85,22 @@ async function loginInstagram(
     // เช็คว่า login สำเร็จจริงไหม โดยดูว่ามี element ของหน้า home ไหม
     const homeSelector = 'svg[aria-label="Home"]';
     try {
-      await page.waitForSelector(homeSelector, { timeout: 10000 });
+      await page.waitForSelector(homeSelector, { timeout: 15000 }); // Increased timeout
       console.log("✅ Login verified by Home icon presence.");
     } catch {
-      console.warn("⚠️ Could not verify login by Home icon, but continuing...");
+      console.warn("⚠️ Could not verify login by Home icon.");
+
+      // Log page content to see what happened (Challenge? Block? 2FA?)
+      try {
+        const bodyText = await page.evaluate(() => document.body.innerText);
+        console.log("📄 Login Failed Page Text:", bodyText.substring(0, 500));
+        const title = await page.title();
+        console.log("📄 Login Failed Page Title:", title);
+      } catch (e) {
+        console.log("Could not get page text");
+      }
+
+      return false; // Return false if verification fails!
     }
 
     return true;
