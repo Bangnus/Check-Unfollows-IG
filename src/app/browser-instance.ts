@@ -126,16 +126,16 @@ export const getPageInstance = async (): Promise<Page> => {
       });
     });
 
-    // 🚫 Block Heavy Resources (Images, Fonts, CSS)
-    await pageInstance.setRequestInterception(true);
-    pageInstance.on("request", (req) => {
-      const resourceType = req.resourceType();
-      if (["image", "stylesheet", "font", "media"].includes(resourceType)) {
-        req.abort();
-      } else {
-        req.continue();
-      }
-    });
+    // 🚫 Block Heavy Resources (Images, Fonts, CSS) - DISABLED TEMPORARILY
+    // await pageInstance.setRequestInterception(true);
+    // pageInstance.on("request", (req) => {
+    //   const resourceType = req.resourceType();
+    //   if (["image", "stylesheet", "font", "media"].includes(resourceType)) {
+    //     req.abort();
+    //   } else {
+    //     req.continue();
+    //   }
+    // });
   }
 
   lastActivityTime = Date.now();

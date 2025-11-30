@@ -4,12 +4,6 @@ import { getPageInstance } from "@/app/browser-instance";
 
 // ✅ ใช้ globalThis เพื่อป้องกัน Session หายตอน Dev (Hot Reload)
 export const maxDuration = 60; // 60 seconds (max for Vercel Hobby)
-const globalForPuppeteer = globalThis as unknown as {
-  currentSession: { page: Page | null };
-};
-const currentSession = globalForPuppeteer.currentSession || { page: null };
-if (process.env.NODE_ENV !== "production")
-  globalForPuppeteer.currentSession = currentSession;
 
 interface InstagramUser {
   username: string;
@@ -38,10 +32,20 @@ async function loginInstagram(
 ): Promise<{ success: boolean; reason?: string }> {
   try {
     console.log("🌍 Navigating to Instagram login page...");
-    await page.goto("https://www.instagram.com/accounts/login/", {
-      waitUntil: "networkidle2",
-      timeout: 60000,
-    });
+    try {
+      await page.goto("https://www.instagram.com/accounts/login/", {
+        waitUntil: "networkidle2",
+        timeout: 60000,
+      });
+    } catch (navError) {
+      console.error("⚠️ Navigation error (retrying):", navError);
+      await page.reload({ waitUntil: "networkidle2" });
+    }
+
+    // Check if page is still valid
+    if (page.isClosed()) {
+      throw new Error("Page closed unexpectedly during navigation");
+    }
 
     await simulateMouseMovement(page);
 
@@ -472,11 +476,13 @@ async function scrapeUserList(
 }
 
 export const POST = async (req: NextRequest) => {
+  let page: Page | null = null;
+
   try {
     console.log(" API Request Received");
     const body = await req.json();
     console.log("📦 Request Body:", body);
-    const { username, password, clientuser, sessionid } = body;
+    const { username, password, clientuser } = body;
 
     // กำหนด targetUser: ถ้ามี clientuser ให้ใช้, ถ้าไม่มีให้ใช้ username
     const targetUser = clientuser || username;
@@ -488,59 +494,17 @@ export const POST = async (req: NextRequest) => {
       );
     }
 
-    let page = currentSession.page;
+    // 🔐 Always start fresh session for Render/Docker stability
+    console.log("🔐 Logging in to Instagram...");
+    page = await getPageInstance();
 
-    // 1. ตรวจสอบว่าต้อง Login ใหม่หรือไม่
-    if (sessionid) {
-      // ✅ Cookie Mode: Use provided sessionid
-      if (!page || page.isClosed()) {
-        console.log("🍪 Authenticating via Session Cookie...");
-        page = await getPageInstance();
-
-        // Set cookie
-        await page.setCookie({
-          name: "sessionid",
-          value: sessionid,
-          domain: ".instagram.com",
-          path: "/",
-          secure: true,
-          httpOnly: true,
-        });
-
-        currentSession.page = page;
-      }
-    } else if (username && password) {
-      // 🔐 Credentials Mode: Login with username/password
-      if (!page || page.isClosed()) {
-        console.log("🔐 Logging in to Instagram...");
-        page = await getPageInstance();
-
-        const loginResult = await loginInstagram(page, username, password);
-        if (!loginResult.success) {
-          return NextResponse.json(
-            { error: loginResult.reason || "Login failed" },
-            { status: 401 }
-          );
-        }
-        currentSession.page = page; // Save session
-      } else {
-        console.log("ℹ️ Active session found, skipping login.");
-      }
-    } else {
-      // ถ้าไม่ส่ง username/password หรือ sessionid มา ต้องมี session อยู่แล้ว
-      if (!page || page.isClosed()) {
-        return NextResponse.json(
-          {
-            error:
-              "Session expired. Please provide username/password OR sessionid cookie.",
-          },
-          { status: 401 }
-        );
-      }
+    const loginResult = await loginInstagram(page, username, password);
+    if (!loginResult.success) {
+      return NextResponse.json(
+        { error: loginResult.reason || "Login failed" },
+        { status: 401 }
+      );
     }
-
-    // Update page reference just in case
-    page = currentSession.page!;
 
     // 2. เริ่ม Scrape ข้อมูล
     console.log(`📥 Scraping following & followers for ${targetUser}...`);
@@ -564,6 +528,11 @@ export const POST = async (req: NextRequest) => {
     const notFollowingBack = following.filter(
       (f) => !followers.some((fol) => fol.username === f.username)
     );
+
+    // Close page after use
+    if (page && !page.isClosed()) {
+      await page.close();
+    }
 
     return NextResponse.json(
       {

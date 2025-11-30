@@ -39,14 +39,13 @@ interface ApiResponse {
 const Page = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [sessionid, setSessionid] = useState("");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleCheck = async () => {
-    if (!username || (!password && !sessionid)) {
-      setError("Please enter Username AND (Password OR Session ID).");
+    if (!username || !password) {
+      setError("Please enter Username AND Password.");
       return;
     }
 
@@ -60,7 +59,7 @@ const Page = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ username, password, sessionid }),
+        body: JSON.stringify({ username, password }),
       });
 
       const contentType = response.headers.get("content-type");
@@ -135,23 +134,6 @@ const Page = () => {
                       prefix={<LockOutlined className="text-gray-400" />}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="rounded-xl py-3 bg-gray-50 border-gray-200 hover:bg-white focus:bg-white transition-colors"
-                    />
-                  </div>
-
-                  <div className="relative flex py-2 items-center">
-                    <div className="flex-grow border-t border-gray-200"></div>
-                    <span className="flex-shrink-0 mx-4 text-gray-400 text-xs">OR USE COOKIE (Recommended for Vercel)</span>
-                    <div className="flex-grow border-t border-gray-200"></div>
-                  </div>
-
-                  <div>
-                    <Input.Password
-                      size="large"
-                      placeholder="Session ID (cookie)"
-                      prefix={<LockOutlined className="text-gray-400" />}
-                      value={sessionid}
-                      onChange={(e) => setSessionid(e.target.value)}
                       className="rounded-xl py-3 bg-gray-50 border-gray-200 hover:bg-white focus:bg-white transition-colors"
                     />
                   </div>
