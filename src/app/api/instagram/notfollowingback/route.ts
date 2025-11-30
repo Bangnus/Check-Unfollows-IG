@@ -85,16 +85,27 @@ async function loginInstagram(
     } catch (e) {}
 
     console.log("⌨️ Typing username...");
+
+    // Wait for ANY input to appear first (indicates form load)
+    try {
+      await page.waitForSelector("input", { timeout: 15000 });
+    } catch {
+      console.warn("⚠️ No inputs found on page after 15s");
+    }
+
     const usernameSelectors = [
       'input[name="username"]',
       'input[aria-label="Phone number, username, or email"]',
       'input[type="text"]',
+      'input[type="email"]',
+      'input[type="tel"]',
       "label input",
+      "#loginForm input",
     ];
     let usernameInput;
     for (const selector of usernameSelectors) {
       try {
-        await page.waitForSelector(selector, { timeout: 5000 });
+        await page.waitForSelector(selector, { timeout: 3000 });
         usernameInput = selector;
         console.log(`✅ Found username input: ${selector}`);
         break;
