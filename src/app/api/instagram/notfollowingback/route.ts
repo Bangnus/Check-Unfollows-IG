@@ -193,13 +193,17 @@ async function loginInstagram(
   }
 }
 // ดึงข้อมูลผู้ใช้งานจากหน้าต่าง dialog
-async function scrapeUsersFromDialog(page: Page): Promise<InstagramUser[]> {
+async function scrapeUsersFromDialog(
+  page: Page,
+  startTime: number
+): Promise<InstagramUser[]> {
   const collectedUsers: InstagramUser[] = [];
   const collectedUsernames = new Set<string>();
   let previousUsersCount = 0;
   let attempts = 0;
   let attemptNoNewUsers = 0;
   const maxAttempts = 300;
+  const TIME_LIMIT = 50000; // 50 seconds limit (Vercel has 60s hard limit)
 
   // Selector สำหรับ Dialog (ลองหลายแบบ)
   const dialogSelector = 'div[role="dialog"]';
@@ -233,6 +237,14 @@ async function scrapeUsersFromDialog(page: Page): Promise<InstagramUser[]> {
   });
 
   while (attempts < maxAttempts) {
+    // ⏳ Check Time Limit
+    if (Date.now() - startTime > TIME_LIMIT) {
+      console.warn(
+        "⏳ Time limit reached! Stopping scrape to prevent timeout."
+      );
+      break;
+    }
+
     attempts++;
     console.log(
       `🔄 Attempt: ${attempts}, Users collected: ${collectedUsers.length}`
@@ -247,13 +259,14 @@ async function scrapeUsersFromDialog(page: Page): Promise<InstagramUser[]> {
               .length > 0
           );
         },
-        { timeout: 5000 }
+        { timeout: 2000 } // Reduced timeout
       );
     } catch {
       console.log("⚠️ Waiting for users timed out, trying to scroll anyway...");
     }
 
-    await delay(2000 + Math.random() * 1000);
+    // Reduced delay
+    await delay(500 + Math.random() * 500);
 
     const users = await page.evaluate((existingUsernames) => {
       const newUsers: InstagramUser[] = [];
@@ -317,7 +330,8 @@ async function scrapeUsersFromDialog(page: Page): Promise<InstagramUser[]> {
 
     console.log(`✅ New Users Collected: ${users.length}`);
 
-    await delay(1000 + Math.random() * 1000);
+    // Reduced delay
+    await delay(200 + Math.random() * 300);
 
     // Scroll Logic
     const scrollSuccess = await page.evaluate(async () => {
@@ -341,8 +355,8 @@ async function scrapeUsersFromDialog(page: Page): Promise<InstagramUser[]> {
       if (!scrollContainer) return false;
 
       const beforeScroll = scrollContainer.scrollTop;
-      scrollContainer.scrollBy(0, 300 + Math.random() * 200); // Scroll ลง
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      scrollContainer.scrollBy(0, 600 + Math.random() * 200); // Scroll ลงเยอะขึ้น (Faster scroll)
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Reduced wait
 
       return scrollContainer.scrollTop !== beforeScroll;
     });
@@ -355,12 +369,13 @@ async function scrapeUsersFromDialog(page: Page): Promise<InstagramUser[]> {
         const box = await dialogBox.boundingBox();
         if (box) {
           await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-          await page.mouse.wheel({ deltaY: 500 });
+          await page.mouse.wheel({ deltaY: 800 }); // Faster wheel
         }
       }
     }
 
-    await delay(2000 + Math.random() * 1000);
+    // Reduced delay
+    await delay(500 + Math.random() * 500);
 
     const newUserCount = collectedUsers.length;
     if (newUserCount <= previousUsersCount) {
@@ -398,7 +413,7 @@ async function closeDialog(page: Page) {
 
       if (closeBtn) (closeBtn as HTMLElement).click();
     });
-    await delay(2000);
+    await delay(1000); // Reduced delay
   } catch {
     console.log("⚠️ Could not close dialog, continuing...");
   }
@@ -407,30 +422,29 @@ async function closeDialog(page: Page) {
 async function scrapeUserList(
   page: Page,
   type: "following" | "followers",
-  clientuser: string
+  clientuser: string,
+  startTime: number
 ): Promise<InstagramUser[]> {
   try {
+    // Check time before starting
+    if (Date.now() - startTime > 50000) {
+      console.warn(`⏳ Time limit reached before scraping ${type}. Skipping.`);
+      return [];
+    }
+
     console.log(`🔄 Loading ${type} for ${clientuser}`);
     await page.goto(`https://www.instagram.com/${clientuser}/`, {
       waitUntil: "networkidle2",
-      timeout: 60000,
+      timeout: 30000, // Reduced timeout
     });
 
     // สร้าง Link selector
     const linkSelector = `a[href*="/${type}"]`; // ใช้ wildcard * เพื่อความชัวร์
 
     try {
-      await page.waitForSelector(linkSelector, { timeout: 10000 });
+      await page.waitForSelector(linkSelector, { timeout: 5000 }); // Reduced timeout
     } catch {
       console.error(`❌ Could not find link for ${type}.`);
-      console.log(`Current URL: ${page.url()}`);
-      console.log(`Page Title: ${await page.title()}`);
-      try {
-        const bodyText = await page.evaluate(() => document.body.innerText);
-        console.log("📄 Page Text on Error:", bodyText.substring(0, 500));
-      } catch (e) {
-        console.log("Could not get page text");
-      }
       return [];
     }
 
@@ -438,13 +452,13 @@ async function scrapeUserList(
     await page.click(linkSelector);
 
     console.log("⏳ Waiting for dialog...");
-    await page.waitForSelector('div[role="dialog"]', { timeout: 15000 });
+    await page.waitForSelector('div[role="dialog"]', { timeout: 10000 });
 
     // รอสักครู่ก่อนเริ่มดึงข้อมูล
-    await delay(2000);
+    await delay(1000);
 
     // ดึงข้อมูล
-    const users = await scrapeUsersFromDialog(page);
+    const users = await scrapeUsersFromDialog(page, startTime);
 
     // ปิด dialog
     await closeDialog(page);
@@ -531,11 +545,22 @@ export const POST = async (req: NextRequest) => {
 
     // 2. เริ่ม Scrape ข้อมูล
     console.log(`📥 Scraping following & followers for ${targetUser}...`);
+    const startTime = Date.now(); // Start timer
 
-    const following = await scrapeUserList(page, "following", targetUser);
-    await delay(3000);
-    const followers = await scrapeUserList(page, "followers", targetUser);
-    await delay(3000);
+    const following = await scrapeUserList(
+      page,
+      "following",
+      targetUser,
+      startTime
+    );
+    await delay(1000); // Reduced delay
+    const followers = await scrapeUserList(
+      page,
+      "followers",
+      targetUser,
+      startTime
+    );
+    await delay(1000); // Reduced delay
 
     const notFollowingBack = following.filter(
       (f) => !followers.some((fol) => fol.username === f.username)
