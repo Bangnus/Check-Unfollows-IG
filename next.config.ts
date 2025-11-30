@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
     "puppeteer-core",
     "puppeteer-extra",
     "puppeteer-extra-plugin-stealth",
+    "puppeteer-extra-plugin-user-preferences",
     "@sparticuz/chromium",
     "clone-deep",
     "merge-deep",
@@ -18,7 +19,11 @@ const nextConfig: NextConfig = {
 
   // 2. ย้ายมาตรงนี้! (ไม่อยู่ใน experimental แล้ว)
   outputFileTracingIncludes: {
-    "/api/**/*": ["./node_modules/puppeteer-extra-plugin-stealth/**/*"],
+    "/api/**/*": [
+      "./node_modules/puppeteer-extra-plugin-stealth/**/*",
+      "./node_modules/puppeteer-extra-plugin-user-preferences/**/*",
+      "./node_modules/puppeteer-extra-plugin-user-data-dir/**/*",
+    ],
   },
 
   images: {
