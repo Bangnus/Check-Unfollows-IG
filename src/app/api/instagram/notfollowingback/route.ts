@@ -27,6 +27,7 @@ async function simulateMouseMovement(page: Page) {
   const x = Math.floor(Math.random() * 1280);
   const y = Math.floor(Math.random() * 800);
   await page.mouse.move(x, y, { steps: Math.floor(Math.random() * 3) + 3 });
+  await page.mouse.move(x, y, { steps: Math.floor(Math.random() * 3) + 3 });
   await delay(mouseMoveDuration);
 }
 
@@ -34,43 +35,35 @@ async function loginInstagram(
   page: Page,
   username: string,
   password: string
-): Promise<boolean> {
+): Promise<{ success: boolean; reason?: string }> {
   try {
     console.log("🌍 Navigating to Instagram login page...");
     await page.goto("https://www.instagram.com/accounts/login/", {
       waitUntil: "networkidle2",
-      timeout: 60000, // เพิ่ม timeout
+      timeout: 60000,
     });
 
     await simulateMouseMovement(page);
 
-    // 🍪 Handle Cookie Consent (European IPs / Vercel often see this)
+    // 🍪 Handle Cookie Consent
     try {
-      const cookieSelector = "button._a9--._a9_0"; // Common "Allow" button class
-      const cookieTextSelectors = [
-        "//button[contains(text(), 'Allow all cookies')]",
-        "//button[contains(text(), 'Decline optional cookies')]",
-        "//button[contains(text(), 'Accept')]",
-        "//button[contains(text(), 'Allow')]",
-      ];
-
-      // Check for class-based button first
+      const cookieSelector = "button._a9--._a9_0";
       if ((await page.$(cookieSelector)) !== null) {
         console.log("🍪 Found cookie button by class, clicking...");
         await page.click(cookieSelector);
         await delay(2000);
       } else {
         // Check for text-based buttons
+        const cookieTextSelectors = [
+          "//button[contains(text(), 'Allow all cookies')]",
+          "//button[contains(text(), 'Decline optional cookies')]",
+          "//button[contains(text(), 'Accept')]",
+          "//button[contains(text(), 'Allow')]",
+        ];
         for (const xpath of cookieTextSelectors) {
           try {
             const clicked = await page.evaluate((xp) => {
-              const result = document.evaluate(
-                xp,
-                document,
-                null,
-                9, // XPathResult.FIRST_ORDERED_NODE_TYPE
-                null
-              );
+              const result = document.evaluate(xp, document, null, 9, null);
               const node = result.singleNodeValue;
               if (node && node instanceof HTMLElement) {
                 node.click();
@@ -78,35 +71,26 @@ async function loginInstagram(
               }
               return false;
             }, xpath);
-
             if (clicked) {
-              console.log(
-                `🍪 Found cookie button by text (${xpath}), clicking...`
-              );
               await delay(2000);
               break;
             }
-          } catch (err) {
-            // Ignore errors for individual xpaths
-          }
+          } catch (err) {}
         }
       }
-    } catch (e) {
-      console.log("⚠️ Error handling cookies (might not be present):", e);
-    }
+    } catch (e) {}
 
     console.log("⌨️ Typing username...");
-    // Try multiple selectors for username
     const usernameSelectors = [
       'input[name="username"]',
       'input[aria-label="Phone number, username, or email"]',
       'input[type="text"]',
-      "label input", // Generic fallback
+      "label input",
     ];
     let usernameInput;
     for (const selector of usernameSelectors) {
       try {
-        await page.waitForSelector(selector, { timeout: 5000 }); // Short timeout for each
+        await page.waitForSelector(selector, { timeout: 5000 });
         usernameInput = selector;
         console.log(`✅ Found username input: ${selector}`);
         break;
@@ -116,30 +100,19 @@ async function loginInstagram(
     }
 
     if (!usernameInput) {
-      // Debugging: Log what page we are actually on
       const title = await page.title();
-      const url = page.url();
-      const content = await page.evaluate(() =>
-        document.body.innerText.substring(0, 500)
-      );
-      console.error(`❌ Failed to find username input.`);
-      console.error(`📄 Page Title: ${title}`);
-      console.error(`🔗 Page URL: ${url}`);
-      console.error(`📝 Page Content: ${content}`);
-
-      throw new Error(`Could not find username input field. Page: ${title}`);
+      return {
+        success: false,
+        reason: `Could not find username input field. Page: ${title}`,
+      };
     }
 
-    await page.type(usernameInput, username, {
-      delay: Math.random() * 200 + 100,
-    });
+    await page.type(usernameInput, username, { delay: 100 });
 
     console.log("⌨️ Typing password...");
     const passwordSelector = 'input[name="password"]';
     await page.waitForSelector(passwordSelector, { timeout: 30000 });
-    await page.type(passwordSelector, password, {
-      delay: Math.random() * 200 + 100,
-    });
+    await page.type(passwordSelector, password, { delay: 100 });
 
     await simulateMouseMovement(page);
 
@@ -149,43 +122,29 @@ async function loginInstagram(
     await page.click(submitSelector);
 
     console.log("⏳ Waiting for navigation...");
-    await page.waitForNavigation({
-      waitUntil: "networkidle2",
-      timeout: 60000,
-    });
+    await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 60000 });
 
     const pageContent = await page.content();
-    if (
-      pageContent.includes("Sorry, your password was incorrect") ||
-      pageContent.includes("Suspicious login attempt")
-    ) {
-      console.warn(
-        "❌ Login failed: Incorrect password or suspicious attempt."
-      );
-      return false;
+    if (pageContent.includes("Sorry, your password was incorrect")) {
+      return { success: false, reason: "Incorrect password" };
+    }
+    if (pageContent.includes("Suspicious login attempt")) {
+      return { success: false, reason: "Suspicious login attempt blocked" };
     }
 
     // 🚨 Handle "Help us confirm it's you" Challenge
     if (pageContent.includes("Help us confirm it's you")) {
       console.warn("⚠️ Instagram Security Challenge Detected!");
 
-      // Try to click "Next" or "Send Security Code"
       try {
         const clicked = await page.evaluate(() => {
           const buttons = [
             "//button[contains(text(), 'Next')]",
             "//button[contains(text(), 'Send Security Code')]",
-            "//div[contains(text(), 'Next')]", // Sometimes it's a div
+            "//div[contains(text(), 'Next')]",
           ];
-
           for (const xpath of buttons) {
-            const result = document.evaluate(
-              xpath,
-              document,
-              null,
-              9, // XPathResult.FIRST_ORDERED_NODE_TYPE
-              null
-            );
+            const result = document.evaluate(xpath, document, null, 9, null);
             const node = result.singleNodeValue;
             if (node && node instanceof HTMLElement) {
               node.click();
@@ -194,81 +153,45 @@ async function loginInstagram(
           }
           return false;
         });
+        if (clicked) await delay(5000);
+      } catch (e) {}
 
-        if (clicked) {
-          console.log("🖱️ Clicked challenge button to send code...");
-          await delay(5000); // Wait longer for page transition
-        } else {
-          console.log("⚠️ Could not find any challenge button to click.");
-        }
-      } catch (e) {
-        console.log("Error clicking challenge button:", e);
-      }
-
-      // Wait for verification (Manual for Local, Auto-check for Prod)
+      // Wait for verification
       const isProduction = process.env.NODE_ENV === "production";
-      const waitTime = isProduction ? 30000 : 180000; // 30s for Prod, 3m for Local
-
-      console.log(
-        `⏳ Waiting ${waitTime / 1000}s for verification (${
-          isProduction ? "Auto-check" : "Manual Check"
-        })...`
-      );
+      const waitTime = isProduction ? 30000 : 180000;
 
       try {
-        // Wait for Home icon to appear (meaning user solved it or auto-click worked)
         await page.waitForSelector('svg[aria-label="Home"]', {
           timeout: waitTime,
         });
         console.log("✅ Verification successful!");
-        return true;
+        return { success: true };
       } catch {
-        console.error(
-          `❌ Verification timed out. ${
-            isProduction
-              ? "Challenge could not be solved automatically."
-              : "Please try logging in from a trusted IP."
-          }`
-        );
-        return false;
+        return {
+          success: false,
+          reason: isProduction
+            ? "Challenge timed out (Auto-check failed)"
+            : "Challenge timed out (Manual check failed)",
+        };
       }
     }
 
-    // เช็คว่า login สำเร็จจริงไหม โดยดูว่ามี element ของหน้า home ไหม
+    // Verify Login
     const homeSelector = 'svg[aria-label="Home"]';
     try {
-      await page.waitForSelector(homeSelector, { timeout: 15000 }); // Increased timeout
-      console.log("✅ Login verified by Home icon presence.");
+      await page.waitForSelector(homeSelector, { timeout: 15000 });
+      return { success: true };
     } catch {
-      console.warn("⚠️ Could not verify login by Home icon.");
-
-      // Log page content to see what happened (Challenge? Block? 2FA?)
-      try {
-        const bodyText = await page.evaluate(() => document.body.innerText);
-        console.log("📄 Login Failed Page Text:", bodyText.substring(0, 500));
-        const title = await page.title();
-        console.log("📄 Login Failed Page Title:", title);
-      } catch (e) {
-        console.log("Could not get page text");
-      }
-
-      return false; // Return false if verification fails!
+      return {
+        success: false,
+        reason: "Login verification failed (Home icon not found)",
+      };
     }
-
-    return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error("🚨 Login error:", error);
-    console.log("Current URL on error:", page.url());
-    try {
-      const bodyText = await page.evaluate(() => document.body.innerText);
-      console.log("📄 Page Text on Error:", bodyText.substring(0, 500)); // Log first 500 chars
-    } catch (e) {
-      console.log("Could not get page text");
-    }
-    return false;
+    return { success: false, reason: `Login Error: ${error.message}` };
   }
 }
-
 // ดึงข้อมูลผู้ใช้งานจากหน้าต่าง dialog
 async function scrapeUsersFromDialog(page: Page): Promise<InstagramUser[]> {
   const collectedUsers: InstagramUser[] = [];
@@ -567,10 +490,10 @@ export const POST = async (req: NextRequest) => {
         //   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
         // );
 
-        const loginSuccess = await loginInstagram(page, username, password);
-        if (!loginSuccess) {
+        const loginResult = await loginInstagram(page, username, password);
+        if (!loginResult.success) {
           return NextResponse.json(
-            { error: "Login failed. Invalid credentials or security check." },
+            { error: loginResult.reason || "Login failed" },
             { status: 401 }
           );
         }
