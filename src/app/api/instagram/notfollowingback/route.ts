@@ -96,16 +96,19 @@ async function loginInstagram(
     const usernameSelectors = [
       'input[name="username"]',
       'input[aria-label="Phone number, username, or email"]',
+      'input[aria-label="หมายเลขโทรศัพท์ ชื่อผู้ใช้ หรืออีเมล"]', // Thai
+      'input[type="รหัสผ่าน"]',
       'input[type="text"]',
       'input[type="email"]',
       'input[type="tel"]',
+      'input[type="password"]',
       "label input",
       "#loginForm input",
     ];
     let usernameInput;
     for (const selector of usernameSelectors) {
       try {
-        await page.waitForSelector(selector, { timeout: 3000 });
+        await page.waitForSelector(selector, { timeout: 5000 }); // Increased to 5s
         usernameInput = selector;
         console.log(`✅ Found username input: ${selector}`);
         break;
