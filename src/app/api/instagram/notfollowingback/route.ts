@@ -273,7 +273,7 @@ async function scrapeUsersFromDialog(
     }
 
     // Reduced delay
-    await delay(500 + Math.random() * 500);
+    await delay(200 + Math.random() * 200);
 
     const users = await page.evaluate((existingUsernames) => {
       const newUsers: InstagramUser[] = [];
@@ -291,35 +291,17 @@ async function scrapeUsersFromDialog(
         const username = href.replace(/\//g, "");
         if (!username) return;
 
-        // กรองพวกที่ไม่ใช่ user (เช่น location, hashtag) - ปกติ user จะไม่มี /explore/ หรืออื่นๆ
+        // กรองพวกที่ไม่ใช่ user
         if (username === "explore" || username === "reels") return;
 
         if (!foundUsernames.has(username)) {
           foundUsernames.add(username);
 
-          // พยายามหาชื่อจริงและรูป
-          // รูปมักจะอยู่ใน img tag ใน link หรือใกล้เคียง
-          const img =
-            link.querySelector("img") ||
-            link.closest("div[role='button']")?.querySelector("img");
-
-          // ชื่อจริงมักจะอยู่ใน span หรือ div ใกล้ๆ
-          // อันนี้ยากหน่อยเพราะ structure เปลี่ยนบ่อย
-          // ลองหา text ที่ไม่ใช่ username
-          let fullName = "";
-          const parentRow = link.closest('div[role="listitem"]'); // สมมติว่าเป็น listitem
-          if (parentRow) {
-            const texts = (parentRow as HTMLElement).innerText.split("\n");
-            fullName =
-              texts.find(
-                (t) => t !== username && t !== "Follow" && t !== "Remove"
-              ) || "";
-          }
-
+          // ⚡ FAST MODE: Extract only essential data to speed up
           newUsers.push({
             username: username,
-            fullName: fullName,
-            profilePic: img ? img.getAttribute("src") : null,
+            fullName: "", // Skip heavy DOM query
+            profilePic: null, // Skip heavy DOM query
             profileLink: `https://www.instagram.com/${username}`,
           });
         }
@@ -337,8 +319,8 @@ async function scrapeUsersFromDialog(
 
     console.log(`✅ New Users Collected: ${users.length}`);
 
-    // Reduced delay
-    await delay(200 + Math.random() * 300);
+    // Minimal delay between collect and scroll
+    await delay(100);
 
     // Scroll Logic
     const scrollSuccess = await page.evaluate(async () => {
@@ -361,28 +343,38 @@ async function scrapeUsersFromDialog(
 
       if (!scrollContainer) return false;
 
-      const beforeScroll = scrollContainer.scrollTop;
-      scrollContainer.scrollBy(0, 600 + Math.random() * 200); // Scroll ลงเยอะขึ้น (Faster scroll)
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Reduced wait
+      const previousHeight = scrollContainer.scrollHeight;
+      scrollContainer.scrollBy(0, 1500); // Scroll down MORE
 
-      return scrollContainer.scrollTop !== beforeScroll;
+      // ⏳ Wait for height to change (Content loaded)
+      // Fast check loop
+      let retries = 0;
+      while (scrollContainer.scrollHeight === previousHeight && retries < 15) {
+        await new Promise((resolve) => setTimeout(resolve, 100)); // Check every 100ms
+        retries++;
+      }
+
+      return scrollContainer.scrollHeight > previousHeight;
     });
 
     if (!scrollSuccess) {
-      console.log("⚠️ Scroll via JS failed, trying mouse wheel...");
+      console.log(
+        "⚠️ Scroll via JS didn't trigger load, trying mouse wheel..."
+      );
       // Move mouse to center of dialog
       const dialogBox = await page.$('div[role="dialog"]');
       if (dialogBox) {
         const box = await dialogBox.boundingBox();
         if (box) {
           await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-          await page.mouse.wheel({ deltaY: 800 }); // Faster wheel
+          await page.mouse.wheel({ deltaY: 1000 }); // Faster wheel
+          await delay(500); // Wait for load after wheel
         }
       }
+    } else {
+      // If scroll successful, minimal wait
+      await delay(200);
     }
-
-    // Reduced delay
-    await delay(500 + Math.random() * 500);
 
     const newUserCount = collectedUsers.length;
     if (newUserCount <= previousUsersCount) {
