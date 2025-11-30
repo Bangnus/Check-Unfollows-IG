@@ -578,7 +578,28 @@ export const POST = async (req: NextRequest) => {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
-    console.error("🚨 Error:", error);
+    console.error("Login Failed:", error);
+
+    if (page) {
+      try {
+        // 1. ถ่ายรูปเก็บไว้ในตัวแปร (ไม่ต้อง save ลงไฟล์)
+        const screenshotBuffer = await page.screenshot();
+
+        // 2. ปิด Browser
+        await page.browser().close();
+
+        // 3. ส่งรูปภาพกลับไปให้เราดูทันที!
+        return new Response(screenshotBuffer as any, {
+          status: 500,
+          headers: {
+            "Content-Type": "image/png", // บอก Browser ว่านี่คือรูปภาพ
+          },
+        });
+      } catch (screenshotError) {
+        console.error("Failed to take screenshot:", screenshotError);
+      }
+    }
+
     return NextResponse.json(
       {
         error: error.message || "Internal Server Error",
