@@ -101,11 +101,12 @@ async function loginInstagram(
       'input[name="username"]',
       'input[aria-label="Phone number, username, or email"]',
       'input[type="text"]',
+      "label input", // Generic fallback
     ];
     let usernameInput;
     for (const selector of usernameSelectors) {
       try {
-        await page.waitForSelector(selector, { timeout: 10000 });
+        await page.waitForSelector(selector, { timeout: 5000 }); // Short timeout for each
         usernameInput = selector;
         console.log(`✅ Found username input: ${selector}`);
         break;
@@ -115,7 +116,18 @@ async function loginInstagram(
     }
 
     if (!usernameInput) {
-      throw new Error("Could not find username input field");
+      // Debugging: Log what page we are actually on
+      const title = await page.title();
+      const url = page.url();
+      const content = await page.evaluate(() =>
+        document.body.innerText.substring(0, 500)
+      );
+      console.error(`❌ Failed to find username input.`);
+      console.error(`📄 Page Title: ${title}`);
+      console.error(`🔗 Page URL: ${url}`);
+      console.error(`📝 Page Content: ${content}`);
+
+      throw new Error(`Could not find username input field. Page: ${title}`);
     }
 
     await page.type(usernameInput, username, {
