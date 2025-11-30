@@ -528,6 +528,22 @@ export const POST = async (req: NextRequest) => {
 
     const loginResult = await loginInstagram(page, username, password);
     if (!loginResult.success) {
+      console.error(`❌ Login Failed: ${loginResult.reason}`);
+
+      // 📸 Take screenshot if login fails
+      if (page && !page.isClosed()) {
+        try {
+          const screenshotBuffer = await page.screenshot();
+          await page.close();
+          return new Response(screenshotBuffer as any, {
+            status: 401,
+            headers: { "Content-Type": "image/png" },
+          });
+        } catch (err) {
+          console.error("Failed to take screenshot:", err);
+        }
+      }
+
       return NextResponse.json(
         { error: loginResult.reason || "Login failed" },
         { status: 401 }
@@ -580,7 +596,7 @@ export const POST = async (req: NextRequest) => {
   } catch (error: any) {
     console.error("Login Failed:", error);
 
-    if (page) {
+    if (page && !page.isClosed()) {
       try {
         // 1. ถ่ายรูปเก็บไว้ในตัวแปร (ไม่ต้อง save ลงไฟล์)
         const screenshotBuffer = await page.screenshot();
