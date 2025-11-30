@@ -157,36 +157,45 @@ async function loginInstagram(
     if (pageContent.includes("Help us confirm it's you")) {
       console.warn("⚠️ Instagram Security Challenge Detected!");
 
-      // Try to click "Next" to send code
+      // Try to click "Next" or "Send Security Code"
       try {
         const clicked = await page.evaluate(() => {
-          const xpath = "//button[contains(text(), 'Next')]";
-          const result = document.evaluate(
-            xpath,
-            document,
-            null,
-            9, // XPathResult.FIRST_ORDERED_NODE_TYPE
-            null
-          );
-          const node = result.singleNodeValue;
-          if (node && node instanceof HTMLElement) {
-            node.click();
-            return true;
+          const buttons = [
+            "//button[contains(text(), 'Next')]",
+            "//button[contains(text(), 'Send Security Code')]",
+            "//div[contains(text(), 'Next')]", // Sometimes it's a div
+          ];
+
+          for (const xpath of buttons) {
+            const result = document.evaluate(
+              xpath,
+              document,
+              null,
+              9, // XPathResult.FIRST_ORDERED_NODE_TYPE
+              null
+            );
+            const node = result.singleNodeValue;
+            if (node && node instanceof HTMLElement) {
+              node.click();
+              return true;
+            }
           }
           return false;
         });
 
         if (clicked) {
-          console.log("🖱️ Clicking 'Next' to send security code...");
-          await delay(2000);
+          console.log("🖱️ Clicked challenge button to send code...");
+          await delay(5000); // Wait longer for page transition
+        } else {
+          console.log("⚠️ Could not find any challenge button to click.");
         }
       } catch (e) {
-        console.log("Could not click Next button:", e);
+        console.log("Error clicking challenge button:", e);
       }
 
       // Wait for verification (Manual for Local, Auto-check for Prod)
       const isProduction = process.env.NODE_ENV === "production";
-      const waitTime = isProduction ? 15000 : 180000; // 15s for Prod, 3m for Local
+      const waitTime = isProduction ? 30000 : 180000; // 30s for Prod, 3m for Local
 
       console.log(
         `⏳ Waiting ${waitTime / 1000}s for verification (${
