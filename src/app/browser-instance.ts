@@ -54,10 +54,11 @@ export const getBrowserInstance = async (): Promise<Browser> => {
           "--disable-web-security",
           "--disable-features=IsolateOrigins,site-per-process",
           "--disable-blink-features=AutomationControlled",
+          "--window-size=1920,1080", // 👈 Force window size
           `--proxy-server=${config.PROXY_SERVER || ""}`,
-          "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+          "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", // 👈 Linux UA for Docker
         ],
-        defaultViewport: chromium.defaultViewport,
+        defaultViewport: { width: 1920, height: 1080 }, // 👈 Explicit viewport
         executablePath: await chromium.executablePath(),
         headless: chromium.headless,
         ignoreHTTPSErrors: true,
