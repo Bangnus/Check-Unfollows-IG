@@ -44,10 +44,81 @@ async function loginInstagram(
 
     await simulateMouseMovement(page);
 
+    // 🍪 Handle Cookie Consent (European IPs / Vercel often see this)
+    try {
+      const cookieSelector = "button._a9--._a9_0"; // Common "Allow" button class
+      const cookieTextSelectors = [
+        "//button[contains(text(), 'Allow all cookies')]",
+        "//button[contains(text(), 'Decline optional cookies')]",
+        "//button[contains(text(), 'Accept')]",
+        "//button[contains(text(), 'Allow')]",
+      ];
+
+      // Check for class-based button first
+      if ((await page.$(cookieSelector)) !== null) {
+        console.log("🍪 Found cookie button by class, clicking...");
+        await page.click(cookieSelector);
+        await delay(2000);
+      } else {
+        // Check for text-based buttons
+        for (const xpath of cookieTextSelectors) {
+          try {
+            const clicked = await page.evaluate((xp) => {
+              const result = document.evaluate(
+                xp,
+                document,
+                null,
+                9, // XPathResult.FIRST_ORDERED_NODE_TYPE
+                null
+              );
+              const node = result.singleNodeValue;
+              if (node && node instanceof HTMLElement) {
+                node.click();
+                return true;
+              }
+              return false;
+            }, xpath);
+
+            if (clicked) {
+              console.log(
+                `🍪 Found cookie button by text (${xpath}), clicking...`
+              );
+              await delay(2000);
+              break;
+            }
+          } catch (err) {
+            // Ignore errors for individual xpaths
+          }
+        }
+      }
+    } catch (e) {
+      console.log("⚠️ Error handling cookies (might not be present):", e);
+    }
+
     console.log("⌨️ Typing username...");
-    const usernameSelector = 'input[name="username"]';
-    await page.waitForSelector(usernameSelector, { timeout: 30000 });
-    await page.type(usernameSelector, username, {
+    // Try multiple selectors for username
+    const usernameSelectors = [
+      'input[name="username"]',
+      'input[aria-label="Phone number, username, or email"]',
+      'input[type="text"]',
+    ];
+    let usernameInput;
+    for (const selector of usernameSelectors) {
+      try {
+        await page.waitForSelector(selector, { timeout: 10000 });
+        usernameInput = selector;
+        console.log(`✅ Found username input: ${selector}`);
+        break;
+      } catch {
+        continue;
+      }
+    }
+
+    if (!usernameInput) {
+      throw new Error("Could not find username input field");
+    }
+
+    await page.type(usernameInput, username, {
       delay: Math.random() * 200 + 100,
     });
 
