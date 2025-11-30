@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   // 1. รายชื่อแพ็คเกจที่ห้าม Build (ให้ใช้แบบ Server Node.js)
   serverExternalPackages: [
     "puppeteer",

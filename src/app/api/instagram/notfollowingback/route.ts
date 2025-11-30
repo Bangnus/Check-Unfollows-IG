@@ -205,10 +205,10 @@ async function scrapeUsersFromDialog(
   const maxAttempts = 300;
 
   // ⏳ Dynamic Time Limit
-  // Vercel (Production) has a hard 60s limit, so we stop at 55s to return data safely.
-  // Local (Development) can run longer (e.g., 5 mins).
+  // Render.com (Production) allows longer timeouts. We set it to 10 minutes (600s).
+  // Local (Development) also 5 minutes.
   const isProduction = process.env.NODE_ENV === "production";
-  const TIME_LIMIT = isProduction ? 55000 : 300000;
+  const TIME_LIMIT = isProduction ? 600000 : 300000;
 
   // Selector สำหรับ Dialog (ลองหลายแบบ)
   const dialogSelector = 'div[role="dialog"]';

@@ -32,9 +32,9 @@ export const getBrowserInstance = async (): Promise<Browser> => {
   }
 
   if (!browserInstance || !(await isBrowserConnected(browserInstance))) {
-    // ✅ Check VERCEL env to ensure we only use this mode in actual production environment
-    if (process.env.NODE_ENV === "production" && process.env.VERCEL) {
-      // 🚀 Production Mode (Vercel / Serverless)
+    // ✅ Check for Production Environment (Render / Docker)
+    if (process.env.NODE_ENV === "production") {
+      // 🚀 Production Mode (Docker / Render)
       console.log(
         "🚀 Launching in Production Mode (Puppeteer Core + Chromium)"
       );
@@ -46,18 +46,6 @@ export const getBrowserInstance = async (): Promise<Browser> => {
       browserInstance = (await puppeteerCoreExtra.launch({
         args: [
           ...chromium.args,
-          // "--hide-scrollbars",
-          // "--disable-web-security",
-          // "--no-sandbox",
-          // "--disable-setuid-sandbox",
-          // "--disable-dev-shm-usage",
-          // "--disable-accelerated-2d-canvas",
-          // "--no-first-run",
-          // "--no-zygote",
-          // "--single-process",
-          // "--single-process",
-          // "--disable-gpu",
-          // "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
           "--no-sandbox",
           "--disable-setuid-sandbox",
           "--disable-dev-shm-usage",
