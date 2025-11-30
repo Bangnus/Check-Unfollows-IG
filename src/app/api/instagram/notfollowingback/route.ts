@@ -184,20 +184,30 @@ async function loginInstagram(
         console.log("Could not click Next button:", e);
       }
 
-      // Wait for user to solve it manually (if local)
+      // Wait for verification (Manual for Local, Auto-check for Prod)
+      const isProduction = process.env.NODE_ENV === "production";
+      const waitTime = isProduction ? 15000 : 180000; // 15s for Prod, 3m for Local
+
       console.log(
-        "⏳ Waiting 3 minutes for manual verification (Check your email/SMS)..."
+        `⏳ Waiting ${waitTime / 1000}s for verification (${
+          isProduction ? "Auto-check" : "Manual Check"
+        })...`
       );
+
       try {
-        // Wait for Home icon to appear (meaning user solved it)
+        // Wait for Home icon to appear (meaning user solved it or auto-click worked)
         await page.waitForSelector('svg[aria-label="Home"]', {
-          timeout: 180000,
-        }); // 3 minutes
-        console.log("✅ Manual verification successful!");
+          timeout: waitTime,
+        });
+        console.log("✅ Verification successful!");
         return true;
       } catch {
         console.error(
-          "❌ Verification timed out. Please try logging in from a trusted IP."
+          `❌ Verification timed out. ${
+            isProduction
+              ? "Challenge could not be solved automatically."
+              : "Please try logging in from a trusted IP."
+          }`
         );
         return false;
       }
