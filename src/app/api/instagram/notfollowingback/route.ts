@@ -88,13 +88,17 @@ async function loginInstagram(
 
     // Wait for ANY input to appear first (indicates form load)
     try {
-      // ✅ Fix: Use single quotes for the string to allow double quotes inside
-      await page.waitForSelector(
-        'input[aria-label="Phone number, username, or email"]',
-        { timeout: 15000 }
-      );
+      await page.waitForSelector("input", { timeout: 15000 });
     } catch {
       console.warn("⚠️ No inputs found on page after 15s");
+      // 📸 DEBUG: Take screenshot on failure
+      if (process.env.NODE_ENV === "production") {
+        const screenshot = await page.screenshot({ encoding: "base64" });
+        console.log(
+          "📸 Screenshot (Base64):",
+          screenshot.substring(0, 100) + "..."
+        );
+      }
     }
 
     const usernameSelectors = [
@@ -121,6 +125,14 @@ async function loginInstagram(
 
     if (!usernameInput) {
       const title = await page.title();
+      // 📸 DEBUG: Take screenshot on failure
+      if (process.env.NODE_ENV === "production") {
+        const screenshot = await page.screenshot({ encoding: "base64" });
+        console.log(
+          "📸 Screenshot (Base64):",
+          screenshot.substring(0, 100) + "..."
+        );
+      }
       return {
         success: false,
         reason: `Could not find username input field. Page: ${title}`,
